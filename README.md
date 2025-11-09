@@ -26,12 +26,18 @@ FIREBASE_SERVICE_ACCOUNT=""   # JSON blob from Firebase service account
 STARTING_CREDITS=50
 NEXT_PUBLIC_APP_NAME="The Trip"
 NEXT_PUBLIC_DEFAULT_HOME_CITY="Paris"
+NEXT_PUBLIC_FIREBASE_API_KEY=""
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=""
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=""
+NEXT_PUBLIC_FIREBASE_APP_ID=""
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=""
 ```
 `DATABASE_URL` is required for any Prisma call. The health check endpoint (`/api/health`) will alert you when keys are missing.
 
 ### Authentication
 - Create/reuse a Firebase project (you can keep using `room-eadab`).
-- In **Firebase Console → Project Settings → Service Accounts**, generate a new private key and paste the entire JSON (single line) into `FIREBASE_SERVICE_ACCOUNT`.
+- **Server config**: Firebase Console → Project Settings → Service Accounts → generate a private key and paste the JSON (single line) into `FIREBASE_SERVICE_ACCOUNT` (Render env).
+- **Client config**: Firebase Console → Project Settings → General → Web app → copy the config snippet into the `NEXT_PUBLIC_FIREBASE_*` variables.
 - Every API route that touches trip data now expects a Firebase ID token header: `Authorization: Bearer <firebase-id-token>`.
 - The server verifies the token, upserts the user in Postgres, and seeds credits from `STARTING_CREDITS`. Without a valid token the API responds with `401`.
 
@@ -62,6 +68,11 @@ npm run lint     # ESLint via next lint
 
 The landing page introduces The Trip. API routes are namespaced at `/api/*`; you can hit `GET /api/health` to confirm DB connectivity and `POST /api/trips` to create demo trips (user auth to come later).
 
+## Dashboard UI
+- Visit `/dashboard` to use the new trip list + creation flow.
+- Sign in with Google (Firebase Auth) to load trips from `/api/trips` and create new ones. The UI automatically attaches your ID token to each request.
+- Without the Firebase web config, the dashboard clearly instructs you to add the `NEXT_PUBLIC_FIREBASE_*` values on Render before use.
+
 ## Deploying to Render
 1. **Render Postgres**: reuse the `my-data-vibe` instance or create a new database. Copy the *External Database URL* into the Web Service env.
 2. **Web Service**: point to this repo.
@@ -72,9 +83,9 @@ The landing page introduces The Trip. API routes are namespaced at `/api/*`; you
 4. **Cron/Background jobs**: use Render Cron to hit internal API routes later (`/api/tasks/cache-travel`, etc.).
 
 ## Next Steps
-- Wire Firebase auth (reuse the pattern from your IdealHome backend) and swap the `demo-user` placeholder in `/api/trips`.
-- Implement the Gemini image/text proxy and bridge it to `/api/ai/suggestions`.
-- Build the actual trip dashboard UI (calendar, day timeline, travel dashboard component).
-- Add automated tests and CI (Vitest + Playwright) once routes stabilize.
+- Implement the Gemini proxy (or reuse your IdealHome backend) and bridge it to `/api/ai/suggestions`.
+- Add the Amadeus/Booking hotel proxy and render hotel cards alongside each day.
+- Flesh out the dashboard with calendar + drag-and-drop timeline once the data plumbing is stable.
+- Add automated tests and CI (Vitest + Playwright) to guard the growing surface area.
 
 Welcome to The Trip—psychedelic France planning awaits.

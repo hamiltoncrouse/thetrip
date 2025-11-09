@@ -18,6 +18,11 @@ const serverSchema = z.object({
 const clientSchema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().default("The Trip"),
   NEXT_PUBLIC_DEFAULT_HOME_CITY: z.string().default("Paris"),
+  NEXT_PUBLIC_FIREBASE_API_KEY: z.string().optional(),
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: z.string().optional(),
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: z.string().optional(),
+  NEXT_PUBLIC_FIREBASE_APP_ID: z.string().optional(),
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().optional(),
 });
 
 type ServerEnv = z.infer<typeof serverSchema>;
@@ -41,3 +46,11 @@ if (!serverResult.data.DATABASE_URL) {
 
 export const serverEnv = serverResult.data satisfies ServerEnv;
 export const clientEnv = clientResult.data satisfies ClientEnv;
+
+export const isFirebaseClientConfigured = Boolean(
+  clientEnv.NEXT_PUBLIC_FIREBASE_API_KEY &&
+    clientEnv.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
+    clientEnv.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
+    clientEnv.NEXT_PUBLIC_FIREBASE_APP_ID &&
+    clientEnv.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+);
