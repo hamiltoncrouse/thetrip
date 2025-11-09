@@ -79,6 +79,7 @@ export function TripDashboard() {
   const [creating, setCreating] = useState(false);
   const [demoProfile, setDemoProfile] = useState<DemoProfile | null>(null);
   const [demoInitialized, setDemoInitialized] = useState(false);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const isAuthenticated = Boolean(user && idToken);
 
   useEffect(() => {
@@ -181,13 +182,27 @@ export function TripDashboard() {
 
       setFormState(emptyForm);
       const data = await res.json();
-      setTrips((prev) => [data.trip as Trip, ...prev]);
+      setTrips((prev) => {
+        const next = [data.trip as Trip, ...prev];
+        if (!selectedTripId) {
+          setSelectedTripId(data.trip.id);
+        }
+        return next;
+      });
     } catch (err) {
       setTripError(err instanceof Error ? err.message : "Error creating trip");
     } finally {
       setCreating(false);
     }
   }
+
+  useEffect(() => {
+    if (!selectedTripId && trips.length) {
+      setSelectedTripId(trips[0].id);
+    }
+  }, [selectedTripId, trips]);
+
+  const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -253,7 +268,13 @@ export function TripDashboard() {
               )}
               <div className="grid gap-4">
                 {trips.map((trip) => (
-                  <article key={trip.id} className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <article
+                    key={trip.id}
+                    className={`cursor-pointer rounded-2xl border p-5 transition hover:border-white/40 ${
+                      selectedTripId === trip.id ? "border-white/60 bg-white/10" : "border-white/10 bg-white/5"
+                    }`}
+                    onClick={() => setSelectedTripId(trip.id)}
+                  >
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <h3 className="text-xl font-semibold text-white">{trip.title}</h3>
@@ -416,6 +437,32 @@ export function TripDashboard() {
           ) : (
             <p className="text-sm text-slate-400">Provide a demo profile or sign in above to unlock the trip builder.</p>
           )}
+
+          <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+            <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Trip details</p>
+            {selectedTrip ? (
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{selectedTrip.title}</h3>
+                  <p className="text-sm text-slate-400">
+                    {selectedTrip.homeCity || clientEnv.NEXT_PUBLIC_DEFAULT_HOME_CITY}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {selectedTrip.days.map((day) => (
+                    <div key={day.id} className="rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2">
+                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                        {format(new Date(day.date), "EEE, MMM d")}
+                      </p>
+                      <p className="text-sm font-medium text-white">{day.city}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">Select a trip to view its daily cadence.</p>
+            )}
+          </div>
         </aside>
       </main>
     </div>

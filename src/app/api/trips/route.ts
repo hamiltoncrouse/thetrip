@@ -19,6 +19,28 @@ const demoIdentitySchema = z.object({
 
 const DEMO_HEADER = "x-trip-demo-user";
 
+const DEFAULT_CITY = "Paris";
+
+function normalizeDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? null : date;
+}
+
+function buildDayEntries(startDate?: string, endDate?: string, city?: string) {
+  const start = normalizeDate(startDate);
+  const end = normalizeDate(endDate) || start;
+  if (!start) return [];
+
+  const days = [] as { date: Date; city: string }[];
+  const cursor = new Date(start);
+  while (cursor <= (end ?? start)) {
+    days.push({ date: new Date(cursor), city: city || DEFAULT_CITY });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -135,6 +157,8 @@ export async function POST(req: Request) {
 
     const { title, description, startDate, endDate, homeCity } = parsed.data;
 
+    const dayEntries = buildDayEntries(startDate, endDate, homeCity);
+
     const trip = await prisma.trip.create({
       data: {
         title,
@@ -144,14 +168,7 @@ export async function POST(req: Request) {
         endDate: endDate ? new Date(endDate) : null,
         userId: account.id,
         days: {
-          create: startDate
-            ? [
-                {
-                  date: new Date(startDate),
-                  city: homeCity || "Paris",
-                },
-              ]
-            : [],
+          create: dayEntries,
         },
       },
       include: { days: true },
