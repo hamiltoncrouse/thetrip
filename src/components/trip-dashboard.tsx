@@ -80,6 +80,9 @@ export function TripDashboard() {
   const [demoProfile, setDemoProfile] = useState<DemoProfile | null>(null);
   const [demoInitialized, setDemoInitialized] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
+  const [dayForm, setDayForm] = useState({ city: "", notes: "" });
+  const [daySaving, setDaySaving] = useState(false);
   const isAuthenticated = Boolean(user && idToken);
 
   useEffect(() => {
@@ -184,9 +187,8 @@ export function TripDashboard() {
       const data = await res.json();
       setTrips((prev) => {
         const next = [data.trip as Trip, ...prev];
-        if (!selectedTripId) {
-          setSelectedTripId(data.trip.id);
-        }
+        setSelectedTripId(data.trip.id);
+        setSelectedDayId(data.trip.days[0]?.id ?? null);
         return next;
       });
     } catch (err) {
@@ -197,12 +199,81 @@ export function TripDashboard() {
   }
 
   useEffect(() => {
-    if (!selectedTripId && trips.length) {
+    if (!trips.length) {
+      setSelectedTripId(null);
+      setSelectedDayId(null);
+      return;
+    }
+    const exists = selectedTripId && trips.some((trip) => trip.id === selectedTripId);
+    if (!exists) {
       setSelectedTripId(trips[0].id);
+      setSelectedDayId(trips[0].days[0]?.id ?? null);
     }
   }, [selectedTripId, trips]);
 
   const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
+  const selectedDay = selectedTrip?.days.find((day) => day.id === selectedDayId) || null;
+
+  useEffect(() => {
+    if (!selectedTrip) {
+      setSelectedDayId(null);
+      setDayForm({ city: "", notes: "" });
+      return;
+    }
+    const exists = selectedTrip.days.some((day) => day.id === selectedDayId);
+    if (!exists) {
+      setSelectedDayId(selectedTrip.days[0]?.id ?? null);
+    }
+  }, [selectedTrip, selectedDayId]);
+
+  useEffect(() => {
+    if (selectedDay) {
+      setDayForm({ city: selectedDay.city, notes: selectedDay.notes || "" });
+    } else {
+      setDayForm({ city: "", notes: "" });
+    }
+  }, [selectedDay]);
+
+  async function handleSaveDay(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedTrip || !selectedDay || !canAccessTrips) return;
+
+    setDaySaving(true);
+    setTripError(null);
+    try {
+      const res = await fetch(`/api/trips/${selectedTrip.id}/days/${selectedDay.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+        body: JSON.stringify({ city: dayForm.city, notes: dayForm.notes }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to update day (${res.status})`);
+      }
+      const data = await res.json();
+      setTrips((prev) =>
+        prev.map((trip) =>
+          trip.id === selectedTrip.id
+            ? {
+                ...trip,
+                days: trip.days.map((day) =>
+                  day.id === data.day.id
+                    ? { ...day, city: data.day.city, notes: data.day.notes }
+                    : day,
+                ),
+              }
+            : trip,
+        ),
+      );
+    } catch (err) {
+      setTripError(err instanceof Error ? err.message : "Failed to update day");
+    } finally {
+      setDaySaving(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -441,7 +512,7 @@ export function TripDashboard() {
           <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
             <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Trip details</p>
             {selectedTrip ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
                   <h3 className="text-lg font-semibold text-white">{selectedTrip.title}</h3>
                   <p className="text-sm text-slate-400">
@@ -449,15 +520,67 @@ export function TripDashboard() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  {selectedTrip.days.map((day) => (
-                    <div key={day.id} className="rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2">
-                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
-                        {format(new Date(day.date), "EEE, MMM d")}
-                      </p>
-                      <p className="text-sm font-medium text-white">{day.city}</p>
-                    </div>
-                  ))}
+                  {selectedTrip.days.length ? (
+                    selectedTrip.days.map((day) => (
+                      <button
+                        key={day.id}
+                        type="button"
+                        onClick={() => setSelectedDayId(day.id)}
+                        className={`w-full rounded-xl border px-3 py-2 text-left transition ${
+                          selectedDayId === day.id
+                            ? "border-white/60 bg-white/10"
+                            : "border-white/10 bg-transparent hover:border-white/30"
+                        }`}
+                      >
+                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                          {format(new Date(day.date), "EEE, MMM d")}
+                        </p>
+                        <p className="text-sm font-medium text-white">{day.city}</p>
+                        {day.notes && <p className="text-xs text-slate-400">{day.notes}</p>}
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">Add dates to see day-by-day entries.</p>
+                  )}
                 </div>
+
+                {selectedDay ? (
+                  <form className="space-y-3" onSubmit={handleSaveDay}>
+                    <div>
+                      <label className="text-xs text-slate-400" htmlFor="dayCity">
+                        City
+                      </label>
+                      <input
+                        id="dayCity"
+                        value={dayForm.city}
+                        onChange={(e) => setDayForm((prev) => ({ ...prev, city: e.target.value }))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400" htmlFor="dayNotes">
+                        Notes / plans
+                      </label>
+                      <textarea
+                        id="dayNotes"
+                        rows={3}
+                        value={dayForm.notes}
+                        onChange={(e) => setDayForm((prev) => ({ ...prev, notes: e.target.value }))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        placeholder="Morning train to Lyon, dinner at Le Bouchon"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={daySaving}
+                      className="w-full rounded-full bg-white py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-wait disabled:bg-slate-200"
+                    >
+                      {daySaving ? "Saving..." : "Save day"}
+                    </button>
+                  </form>
+                ) : (
+                  <p className="text-sm text-slate-500">Select a day to edit its city and plans.</p>
+                )}
               </div>
             ) : (
               <p className="text-sm text-slate-500">Select a trip to view its daily cadence.</p>
