@@ -42,6 +42,34 @@ const emptyForm = {
   description: "",
 };
 
+const DEMO_STORAGE_KEY = "thetrip-demo-profile";
+
+type DemoProfile = {
+  name: string;
+  email: string;
+};
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
+
+function buildDemoIdentity(profile: DemoProfile | null) {
+  if (!profile) return null;
+  const base = profile.name || profile.email;
+  if (!base) return null;
+  const slug = slugify(base) || Date.now().toString(36);
+  const id = slug.startsWith("demo-") ? slug : `demo-${slug}`;
+  return {
+    id,
+    name: profile.name || null,
+    email: profile.email || `${id}@demo.thetrip`,
+  };
+}
+
 export function TripDashboard() {
   const { status, user, idToken, firebaseConfigured, signInWithGoogle, signOut, error } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -49,23 +77,54 @@ export function TripDashboard() {
   const [tripError, setTripError] = useState<string | null>(null);
   const [formState, setFormState] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
+  const [demoProfile, setDemoProfile] = useState<DemoProfile | null>(null);
+  const [demoInitialized, setDemoInitialized] = useState(false);
   const isAuthenticated = Boolean(user && idToken);
 
-  const headline = useMemo(() => {
-    if (!firebaseConfigured) {
-      return "Add Firebase config to enable the dashboard.";
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(DEMO_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as DemoProfile;
+        setDemoProfile(parsed);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setDemoInitialized(true);
     }
-    if (!isAuthenticated) {
-      return "Sign in to start building your itinerary.";
+  }, []);
+
+  const demoIdentity = useMemo(() => {
+    if (idToken) return null;
+    return buildDemoIdentity(demoProfile);
+  }, [demoProfile, idToken]);
+
+  const authHeaders = useMemo(() => {
+    if (idToken) {
+      return { Authorization: `Bearer ${idToken}` };
+    }
+    if (demoIdentity) {
+      return { "X-Trip-Demo-User": JSON.stringify(demoIdentity) };
+    }
+    return {} as Record<string, string>;
+  }, [idToken, demoIdentity]);
+
+  const canAccessTrips = Boolean(idToken || demoIdentity);
+
+  const headline = useMemo(() => {
+    if (!canAccessTrips) {
+      return firebaseConfigured ? "Sign in to start" : "Add a name to start planning";
     }
     if (!trips.length) {
       return "Create your first trip.";
     }
     return "Your active trips";
-  }, [firebaseConfigured, isAuthenticated, trips.length]);
+  }, [canAccessTrips, firebaseConfigured, trips.length]);
 
   useEffect(() => {
-    if (!idToken) {
+    if (!idToken && !demoIdentity) {
       setTrips([]);
       return;
     }
@@ -75,9 +134,7 @@ export function TripDashboard() {
       setTripError(null);
       try {
         const res = await fetch("/api/trips", {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
+          headers: authHeaders,
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
@@ -93,11 +150,11 @@ export function TripDashboard() {
     }
 
     fetchTrips();
-  }, [idToken]);
+  }, [authHeaders, demoIdentity, idToken]);
 
   async function handleCreateTrip(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!idToken) return;
+    if (!canAccessTrips) return;
 
     setCreating(true);
     setTripError(null);
@@ -106,7 +163,7 @@ export function TripDashboard() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
+          ...authHeaders,
         },
         body: JSON.stringify({
           title: formState.title,
@@ -155,13 +212,16 @@ export function TripDashboard() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => signInWithGoogle().catch((err) => setTripError(err.message))}
-                disabled={!firebaseConfigured || status === "loading"}
-                className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-200"
-              >
-                {firebaseConfigured ? "Sign in with Google" : "Configure Firebase"}
-              </button>
+              <div className="flex flex-col items-end gap-2 text-right">
+                <button
+                  onClick={() => signInWithGoogle().catch((err) => setTripError(err.message))}
+                  disabled={!firebaseConfigured || status === "loading"}
+                  className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-200"
+                >
+                  {firebaseConfigured ? "Sign in with Google" : "Configure Firebase"}
+                </button>
+                <p className="text-xs text-slate-500">or use demo profile below</p>
+              </div>
             )}
           </div>
         </div>
@@ -177,12 +237,13 @@ export function TripDashboard() {
           </div>
 
           {!firebaseConfigured && (
-            <div className="rounded-2xl border border-white/10 bg-rose-500/10 p-4 text-sm text-rose-100">
-              Add your Firebase web config (`NEXT_PUBLIC_FIREBASE_*`) in Render → Environment to enable sign in.
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
+              No Firebase client config yet. Use the demo profile panel to create trips, or add the
+              `NEXT_PUBLIC_FIREBASE_*` env vars later for Google sign-in.
             </div>
           )}
 
-          {isAuthenticated ? (
+          {canAccessTrips ? (
             <div className="space-y-4">
               {loadingTrips && <p className="text-sm text-slate-400">Loading trips...</p>}
               {!loadingTrips && !trips.length && (
@@ -215,17 +276,70 @@ export function TripDashboard() {
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-slate-400">
-              {status === "loading" ? "Checking your session..." : "Sign in to load your saved trips."}
+              {!demoInitialized ? "Loading..." : "Enter a demo profile or sign in to get started."}
             </div>
           )}
         </section>
 
         <aside className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+          {!isAuthenticated && (
+            <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Demo profile</p>
+                <h3 className="text-lg font-semibold text-white">Plan without signing in</h3>
+                <p className="text-sm text-slate-400">Trips are scoped to your name/email and stored in the shared database.</p>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-slate-400" htmlFor="demoName">
+                    Name
+                  </label>
+                  <input
+                    id="demoName"
+                    value={demoProfile?.name || ""}
+                    onChange={(e) => {
+                      const next = { ...(demoProfile || { name: "", email: "" }), name: e.target.value };
+                      setDemoProfile(next);
+                      if (typeof window !== "undefined") {
+                        window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(next));
+                      }
+                    }}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                    placeholder="Jane Doe"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400" htmlFor="demoEmail">
+                    Email (optional)
+                  </label>
+                  <input
+                    id="demoEmail"
+                    type="email"
+                    value={demoProfile?.email || ""}
+                    onChange={(e) => {
+                      const next = { ...(demoProfile || { name: "", email: "" }), email: e.target.value };
+                      setDemoProfile(next);
+                      if (typeof window !== "undefined") {
+                        window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(next));
+                      }
+                    }}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <p className="text-xs text-slate-500">
+                  This info only lives in your browser + Render database for demo purposes. Add Firebase whenever you’re
+                  ready for real auth.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div>
             <p className="text-sm uppercase tracking-[0.4em] text-slate-500">New trip</p>
             <h2 className="text-2xl font-semibold text-white">Blueprint a new adventure</h2>
           </div>
-          {isAuthenticated ? (
+          {canAccessTrips ? (
             <form className="space-y-4" onSubmit={handleCreateTrip}>
               <div>
                 <label className="text-sm text-slate-300" htmlFor="title">
@@ -300,7 +414,7 @@ export function TripDashboard() {
               </button>
             </form>
           ) : (
-            <p className="text-sm text-slate-400">Sign in above to unlock the trip builder.</p>
+            <p className="text-sm text-slate-400">Provide a demo profile or sign in above to unlock the trip builder.</p>
           )}
         </aside>
       </main>

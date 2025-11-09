@@ -26,9 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isFirebaseClientConfigured) {
-      setStatus("error");
-      setError("Firebase client config missing. Set NEXT_PUBLIC_FIREBASE_* env vars.");
-      return;
+      setStatus("ready");
+      setError("Firebase client config missing. Add NEXT_PUBLIC_FIREBASE_* when ready.");
+      return () => {};
     }
 
     const auth = getFirebaseAuthClient();
@@ -55,7 +55,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         async signInWithGoogle() {
           throw new Error("Firebase client config missing.");
         },
-        async signOut() {},
+        async signOut() {
+          setUser(null);
+          setIdToken(null);
+        },
       };
     }
     const auth = getFirebaseAuthClient();
