@@ -29,6 +29,12 @@ NEXT_PUBLIC_DEFAULT_HOME_CITY="Paris"
 ```
 `DATABASE_URL` is required for any Prisma call. The health check endpoint (`/api/health`) will alert you when keys are missing.
 
+### Authentication
+- Create/reuse a Firebase project (you can keep using `room-eadab`).
+- In **Firebase Console → Project Settings → Service Accounts**, generate a new private key and paste the entire JSON (single line) into `FIREBASE_SERVICE_ACCOUNT`.
+- Every API route that touches trip data now expects a Firebase ID token header: `Authorization: Bearer <firebase-id-token>`.
+- The server verifies the token, upserts the user in Postgres, and seeds credits from `STARTING_CREDITS`. Without a valid token the API responds with `401`.
+
 ## Database & Prisma
 Render’s managed Postgres roles cannot use `pg_terminate_backend`, so `prisma migrate dev` will fail. Instead:
 
@@ -51,7 +57,8 @@ npm run lint     # ESLint via next lint
 1. Install dependencies: `npm install` (Node 20+).
 2. Ensure `.env` has a valid `DATABASE_URL`.
 3. Apply migrations: `npx prisma migrate deploy` (first run already sets up the schema).
-4. Start the dev server: `npm run dev` and open http://localhost:3000.
+4. Start the dev server: `npm run dev` and open http://localhost:3000 (or deploy directly to Render if you only run there).
+5. When calling protected API routes (e.g., `/api/trips`), send the Firebase ID token from your client: `fetch("/api/trips", { headers: { Authorization: \\"Bearer ${await user.getIdToken()}\\" } })`.
 
 The landing page introduces The Trip. API routes are namespaced at `/api/*`; you can hit `GET /api/health` to confirm DB connectivity and `POST /api/trips` to create demo trips (user auth to come later).
 

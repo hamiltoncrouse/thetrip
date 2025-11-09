@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serverEnv } from "@/lib/env";
+import { isFirebaseConfigured } from "@/lib/firebase-admin";
 
 export async function GET() {
   try {
@@ -13,6 +14,7 @@ export async function GET() {
       database: "connected",
       latencyMs,
       geminiConfigured: Boolean(serverEnv.GEMINI_API_KEY),
+      firebaseConfigured: isFirebaseConfigured,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
