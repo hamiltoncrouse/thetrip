@@ -231,6 +231,12 @@ export function TripDashboard() {
       return;
     }
 
+    if (selectedDayPlace && cityQuery.trim() === selectedDayPlace.description.trim()) {
+      setCitySuggestions([]);
+      setCitySuggestionsError(null);
+      return;
+    }
+
     const handler = setTimeout(async () => {
       try {
         suggestionsAbortRef.current?.abort();
@@ -259,7 +265,7 @@ export function TripDashboard() {
     }, 250);
 
     return () => clearTimeout(handler);
-  }, [cityQuery, placesSessionToken]);
+  }, [cityQuery, placesSessionToken, selectedDayPlace]);
 
   async function createTrip(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -473,10 +479,12 @@ export function TripDashboard() {
   }
 
   async function handleCitySuggestionSelect(suggestion: PlaceSuggestion) {
-    setCityQuery(suggestion.description);
-    setDayForm((prev) => ({ ...prev, city: suggestion.description }));
+    suggestionsAbortRef.current?.abort();
+    setCitySuggestionsLoading(false);
     setCitySuggestions([]);
     setCitySuggestionsError(null);
+    setCityQuery(suggestion.description);
+    setDayForm((prev) => ({ ...prev, city: suggestion.description }));
     setPlacesSessionToken(createPlacesToken());
 
     if (!selectedDayId) return;
@@ -1046,6 +1054,7 @@ export function TripDashboard() {
                             width={1200}
                             height={640}
                             className="h-48 w-full object-cover"
+                            unoptimized
                           />
                         </div>
                         <div className="flex flex-col gap-1 text-sm text-slate-200 md:flex-row md:items-center md:justify-between">
