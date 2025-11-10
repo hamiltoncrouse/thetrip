@@ -1065,6 +1065,7 @@ export function TripDashboard() {
                         <div className="overflow-hidden rounded-xl border border-white/10">
                           {!mapError ? (
                             <Image
+                              key={`${selectedDayPlace.lat},${selectedDayPlace.lng}`}
                               src={`/api/maps/static?lat=${selectedDayPlace.lat}&lng=${selectedDayPlace.lng}`}
                               alt={`Map of ${selectedDayPlace.description}`}
                               width={1200}
@@ -1074,10 +1075,14 @@ export function TripDashboard() {
                               onError={() => setMapError(true)}
                             />
                           ) : (
-                            <div className="flex h-48 w-full flex-col items-center justify-center bg-slate-900/50 text-center text-sm text-slate-300">
-                              <p>Map preview unavailable.</p>
-                              <p className="text-xs text-slate-500">Open in Google Maps instead.</p>
-                            </div>
+                            <iframe
+                              key={`embed-${selectedDayPlace.lat}-${selectedDayPlace.lng}`}
+                              title={`Map of ${selectedDayPlace.description}`}
+                              src={`https://maps.google.com/maps?q=${selectedDayPlace.lat},${selectedDayPlace.lng}&z=13&output=embed`}
+                              className="h-48 w-full"
+                              loading="lazy"
+                              allowFullScreen
+                            />
                           )}
                         </div>
                         <div className="flex flex-col gap-1 text-sm text-slate-200 md:flex-row md:items-center md:justify-between">
