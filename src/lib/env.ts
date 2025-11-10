@@ -28,12 +28,6 @@ const clientSchema = z.object({
 type ServerEnv = z.infer<typeof serverSchema>;
 type ClientEnv = z.infer<typeof clientSchema>;
 
-const serverResult = serverSchema.safeParse(process.env);
-if (!serverResult.success) {
-  console.error("❌ Invalid server environment variables", serverResult.error.flatten().fieldErrors);
-  throw new Error("Invalid server environment variables");
-}
-
 const clientEnvValues = {
   NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
   NEXT_PUBLIC_DEFAULT_HOME_CITY: process.env.NEXT_PUBLIC_DEFAULT_HOME_CITY,
@@ -50,11 +44,34 @@ if (!clientResult.success) {
   throw new Error("Invalid client environment variables");
 }
 
-if (!serverResult.data.DATABASE_URL) {
-  console.warn("⚠️ DATABASE_URL is not set. Prisma calls will fail until it is configured.");
+const isServer = typeof window === "undefined";
+
+let serverEnv: ServerEnv;
+if (isServer) {
+  const serverResult = serverSchema.safeParse(process.env);
+  if (!serverResult.success) {
+    console.error("❌ Invalid server environment variables", serverResult.error.flatten().fieldErrors);
+    throw new Error("Invalid server environment variables");
+  }
+
+  if (!serverResult.data.DATABASE_URL) {
+    console.warn("⚠️ DATABASE_URL is not set. Prisma calls will fail until it is configured.");
+  }
+
+  serverEnv = serverResult.data satisfies ServerEnv;
+} else {
+  // Provide a proxy on the client to avoid accidental access to server-only envs
+  serverEnv = new Proxy(
+    {},
+    {
+      get() {
+        throw new Error("serverEnv is not available in the browser. Use clientEnv instead.");
+      },
+    },
+  ) as ServerEnv;
 }
 
-export const serverEnv = serverResult.data satisfies ServerEnv;
+export { serverEnv };
 export const clientEnv = clientResult.data satisfies ClientEnv;
 
 export const isFirebaseClientConfigured = Boolean(
