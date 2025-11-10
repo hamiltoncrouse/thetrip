@@ -33,7 +33,7 @@ export async function PATCH(
       );
     }
 
-    const { tripId, dayId } = context.params;
+    const { tripId, dayId } = params;
 
     const day = await prisma.tripDay.findFirst({
       where: {
