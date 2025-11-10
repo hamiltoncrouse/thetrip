@@ -175,9 +175,14 @@ export function TripDashboard() {
         const placeEntries: DayPlaceLookup = {};
         data.trips?.forEach((trip) => {
           trip.days.forEach((day) => {
-            if (day.cityLatitude !== null && day.cityLatitude !== undefined && day.cityLongitude !== null && day.cityLongitude !== undefined) {
+            if (
+              day.cityLatitude !== null &&
+              day.cityLatitude !== undefined &&
+              day.cityLongitude !== null &&
+              day.cityLongitude !== undefined
+            ) {
               placeEntries[day.id] = {
-                placeId: day.cityPlaceId || "",
+                placeId: day.cityPlaceId ?? undefined,
                 description: day.city,
                 lat: day.cityLatitude,
                 lng: day.cityLongitude,
@@ -213,7 +218,7 @@ export function TripDashboard() {
 
   useEffect(() => {
     setMapError(false);
-  }, [selectedDayPlace?.placeId]);
+  }, [selectedDayPlace?.placeId, selectedDayPlace?.lat, selectedDayPlace?.lng]);
 
   useEffect(() => {
     if (!selectedTrip) {
@@ -363,9 +368,9 @@ export function TripDashboard() {
         body: JSON.stringify({
           city: dayForm.city,
           notes: dayForm.notes,
-          cityPlaceId: place?.placeId ?? null,
-          cityLatitude: place?.lat ?? null,
-          cityLongitude: place?.lng ?? null,
+          cityPlaceId: place ? place.placeId ?? null : undefined,
+          cityLatitude: place ? place.lat : undefined,
+          cityLongitude: place ? place.lng : undefined,
         }),
       });
       if (!res.ok) {
