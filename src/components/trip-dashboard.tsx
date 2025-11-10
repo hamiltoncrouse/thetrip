@@ -100,6 +100,7 @@ export function TripDashboard() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const isAuthenticated = Boolean(user && idToken);
   const authHeaders = useMemo(() => {
@@ -183,6 +184,13 @@ export function TripDashboard() {
       setDayForm(emptyDayForm);
     }
   }, [selectedDay]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth >= 1024) {
+      setIsChatOpen(true);
+    }
+  }, []);
 
   async function createTrip(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -425,6 +433,65 @@ export function TripDashboard() {
     }
   }
 
+  const chatPanelContent = (
+    <>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Fonda</p>
+          <h2 className="text-xl font-semibold text-white">Travel consultant</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {chatLoading && <span className="text-xs text-slate-300">thinking...</span>}
+          <button
+            type="button"
+            onClick={() => setIsChatOpen(false)}
+            className="rounded-full border border-white/20 px-3 py-1 text-xs text-white transition hover:border-white lg:hidden"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+      <div
+        className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/30 p-4 text-sm"
+        style={{ minHeight: "320px" }}
+      >
+        {chatMessages.map((message) => (
+          <div
+            key={message.id}
+            className={`max-w-full rounded-2xl px-4 py-2 ${
+              message.role === "assistant"
+                ? "bg-white/10 text-slate-100 self-start"
+                : "bg-white text-slate-900 self-end"
+            }`}
+          >
+            {message.text}
+          </div>
+        ))}
+      </div>
+      <form className="space-y-2 pt-2" onSubmit={sendChatMessage}>
+        <textarea
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          disabled={!isAuthenticated}
+          className="w-full rounded-2xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40 disabled:opacity-50"
+          rows={3}
+          placeholder={
+            isAuthenticated
+              ? "Ask Fonda for restaurant ideas, better routing, or vibe-matched suggestions."
+              : "Sign in to chat with Fonda."
+          }
+        />
+        <button
+          type="submit"
+          disabled={!isAuthenticated || chatLoading || !chatInput.trim()}
+          className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Send to Fonda
+        </button>
+      </form>
+    </>
+  );
+
   return (
     <div className="min-h-screen text-slate-100">
       <header className="border-b border-white/10 bg-[#070016]/80 backdrop-blur">
@@ -460,163 +527,177 @@ export function TripDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10 lg:grid lg:grid-cols-[200px,minmax(0,1fr),360px]">
-        <section className="space-y-4 lg:min-w-0">
-          <div>
-            <p className="text-sm uppercase tracking-[0.4em] text-slate-500">Trips</p>
-            <h2 className="text-3xl font-semibold text-white">{headline}</h2>
-            {tripError && <p className="mt-2 text-sm text-rose-400">{tripError}</p>}
-            {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
-          </div>
-
-          {!firebaseConfigured && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-              Firebase client config missing (`NEXT_PUBLIC_FIREBASE_*`). Add it in Render to enable sign in.
-            </div>
-          )}
-
-          {isAuthenticated ? (
-            <div className="space-y-4">
-              {loadingTrips && <p className="text-sm text-slate-400">Loading trips...</p>}
-              {!loadingTrips && !trips.length && (
-                <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-slate-400">
-                  No trips yet. Tap “New trip” to begin.
-                </div>
-              )}
-              <div className="grid gap-4">
-                {trips.map((trip) => (
-                  <article
-                    key={trip.id}
-                    className={`cursor-pointer rounded-2xl border p-5 transition hover:border-white/40 ${
-                      selectedTripId === trip.id ? "border-white/70 bg-white/15" : "border-white/10 bg-white/5"
-                    }`}
-                    onClick={() => {
-                      setSelectedTripId(trip.id);
-                      setSelectedDayId(trip.days[0]?.id ?? null);
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-white">{trip.title}</h3>
-                        <p className="text-sm text-slate-400">{trip.homeCity || "Anywhere"}</p>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-400">
-                        <span>{trip.days.length} days</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Delete trip "${trip.title}"?`)) {
-                              deleteTrip(trip.id);
-                            }
-                          }}
-                          className="rounded-full border border-white/20 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-white transition hover:border-white/50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                    {trip.description && <p className="mt-2 text-sm text-slate-300">{trip.description}</p>}
-                  </article>
-                ))}
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <main className="mx-auto w-full max-w-6xl space-y-6 px-6 py-10">
+        <section className="space-y-5 rounded-2xl border border-white/10 bg-white/5 p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">{headline}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  className="min-w-[220px] rounded-2xl border border-white/20 bg-slate-900/40 px-4 py-2 text-sm text-white outline-none focus:border-white"
+                  value={selectedTripId ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value || null;
+                    setSelectedTripId(value);
+                    const trip = trips.find((t) => t.id === value);
+                    setSelectedDayId(trip?.days[0]?.id ?? null);
+                  }}
+                  disabled={!trips.length}
+                >
+                  {!trips.length && <option value="">No trips yet</option>}
+                  {trips.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.title}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="button"
                   onClick={() => setShowTripForm((prev) => !prev)}
-                  className="w-full rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition hover:border-white"
+                  className="rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition hover:border-white"
                 >
-                  {showTripForm ? "Hide trip form" : "+ New trip"}
+                  {showTripForm ? "Close form" : "New trip"}
                 </button>
-                {showTripForm && (
-                  <form className="mt-4 space-y-4" onSubmit={createTrip}>
-                    <div>
-                      <label className="text-sm text-slate-300" htmlFor="title">
-                        Trip title
-                      </label>
-                      <input
-                        id="title"
-                        required
-                        value={tripForm.title}
-                        onChange={(e) => setTripForm((prev) => ({ ...prev, title: e.target.value }))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                        placeholder="Sunrise Circuit"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-300" htmlFor="homeCity">
-                        Base city
-                      </label>
-                      <input
-                        id="homeCity"
-                        value={tripForm.homeCity}
-                        onChange={(e) => setTripForm((prev) => ({ ...prev, homeCity: e.target.value }))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                        placeholder="Lisbon"
-                      />
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <label className="text-sm text-slate-300" htmlFor="startDate">
-                          Start date
-                        </label>
-                        <input
-                          id="startDate"
-                          type="date"
-                          value={tripForm.startDate}
-                          onChange={(e) => setTripForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm text-slate-300" htmlFor="endDate">
-                          End date
-                        </label>
-                        <input
-                          id="endDate"
-                          type="date"
-                          value={tripForm.endDate}
-                          onChange={(e) => setTripForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-300" htmlFor="description">
-                        Notes
-                      </label>
-                      <textarea
-                        id="description"
-                        value={tripForm.description}
-                        onChange={(e) => setTripForm((prev) => ({ ...prev, description: e.target.value }))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                        rows={3}
-                        placeholder="Solo rail loop, keep afternoons free for galleries"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={creatingTrip}
-                      className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
-                    >
-                      {creatingTrip ? "Creating..." : "Create trip"}
-                    </button>
-                  </form>
+                {selectedTrip && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Delete trip "${selectedTrip.title}"?`)) {
+                        deleteTrip(selectedTrip.id);
+                      }
+                    }}
+                    className="rounded-full border border-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em] text-rose-200 transition hover:border-rose-200"
+                  >
+                    Delete trip
+                  </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setIsChatOpen((prev) => !prev)}
+                  className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/50"
+                >
+                  {isChatOpen ? "Hide Fonda" : "Open Fonda"}
+                </button>
               </div>
             </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-slate-400">
-              {status === "loading" ? "Checking your session..." : "Sign in with Google to load your trips."}
+            <div className="text-sm text-slate-300 lg:max-w-md">
+              {loadingTrips && <p className="text-xs text-slate-400">Loading trips...</p>}
+              {tripError && <p className="text-rose-400">{tripError}</p>}
+              {error && <p className="text-rose-400">{error}</p>}
+              {!tripError && !error && (
+                <p>
+                  {selectedTrip
+                    ? selectedTrip.description || "No trip description yet."
+                    : isAuthenticated
+                    ? "Create or select a trip to start planning."
+                    : status === "loading"
+                    ? "Checking your session..."
+                    : "Sign in with Google to load your trips."}
+                </p>
+              )}
             </div>
+          </div>
+
+          {selectedTrip && selectedTrip.days.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto rounded-full bg-white/5 px-3 py-2 text-xs">
+              {selectedTrip.days.map((day) => (
+                <button
+                  key={day.id}
+                  type="button"
+                  onClick={() => setSelectedDayId(day.id)}
+                  className={`rounded-full px-4 py-1 transition ${
+                    selectedDayId === day.id
+                      ? "bg-white text-slate-900"
+                      : "bg-transparent text-slate-200 hover:bg-white/10"
+                  }`}
+                >
+                  {format(new Date(day.date), "MMM d")}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {showTripForm && (
+            <form className="grid gap-4 rounded-2xl border border-white/10 bg-slate-900/40 p-4" onSubmit={createTrip}>
+              <div className="sm:col-span-2">
+                <label className="text-sm text-slate-300" htmlFor="title">
+                  Trip title
+                </label>
+                <input
+                  id="title"
+                  required
+                  value={tripForm.title}
+                  onChange={(e) => setTripForm((prev) => ({ ...prev, title: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                  placeholder="Neon Riviera"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-slate-300" htmlFor="homeCity">
+                  Base city
+                </label>
+                <input
+                  id="homeCity"
+                  value={tripForm.homeCity}
+                  onChange={(e) => setTripForm((prev) => ({ ...prev, homeCity: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                  placeholder="Lisbon"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm text-slate-300" htmlFor="startDate">
+                    Start date
+                  </label>
+                  <input
+                    id="startDate"
+                    type="date"
+                    value={tripForm.startDate}
+                    onChange={(e) => setTripForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-300" htmlFor="endDate">
+                    End date
+                  </label>
+                  <input
+                    id="endDate"
+                    type="date"
+                    value={tripForm.endDate}
+                    onChange={(e) => setTripForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                  />
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-sm text-slate-300" htmlFor="description">
+                  Notes / intent
+                </label>
+                <textarea
+                  id="description"
+                  value={tripForm.description}
+                  onChange={(e) => setTripForm((prev) => ({ ...prev, description: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                  rows={3}
+                  placeholder="Anniversary loop, mix rooftop bars with train rides"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creatingTrip}
+                className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60 sm:col-span-2"
+              >
+                {creatingTrip ? "Creating..." : "Create trip"}
+              </button>
+            </form>
           )}
         </section>
 
-        <section className="space-y-4 lg:min-w-0">
-          {selectedTrip ? (
-            <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr),360px]">
+          <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+            {selectedTrip ? (
+              <div className="space-y-5">
                 <div>
                   <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Current trip</p>
                   <h2 className="text-2xl font-semibold text-white">{selectedTrip.title}</h2>
@@ -624,26 +705,9 @@ export function TripDashboard() {
                     {selectedTrip.homeCity || clientEnv.NEXT_PUBLIC_DEFAULT_HOME_CITY}
                   </p>
                 </div>
-                <div className="flex max-w-full gap-2 overflow-x-auto rounded-full bg-white/5 px-2 py-1 text-xs">
-                  {selectedTrip.days.map((day) => (
-                    <button
-                      key={day.id}
-                      type="button"
-                      onClick={() => setSelectedDayId(day.id)}
-                      className={`rounded-full px-3 py-1 transition ${
-                        selectedDayId === day.id
-                          ? "bg-white text-slate-900"
-                          : "bg-transparent text-slate-200 hover:bg-white/10"
-                      }`}
-                    >
-                      {format(new Date(day.date), "MMM d")}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
-              {selectedDay ? (
-                <div className="space-y-5">
+                {selectedDay ? (
+                  <div className="space-y-5">
                   <div>
                     <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Day overview</p>
                     <h3 className="text-xl font-semibold text-white">
@@ -819,53 +883,44 @@ export function TripDashboard() {
           )}
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 lg:flex lg:flex-col">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Fonda</p>
-              <h2 className="text-xl font-semibold text-white">Travel consultant</h2>
+        <div className="hidden lg:flex">
+          {isChatOpen ? (
+            <div className="flex h-full flex-col space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+              {chatPanelContent}
             </div>
-            {chatLoading && <span className="text-xs text-slate-300">thinking...</span>}
-          </div>
-          <div
-            className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/30 p-4 text-sm"
-            style={{ minHeight: "420px", maxHeight: "70vh" }}
-          >
-            {chatMessages.map((message) => (
-              <div
-                key={message.id}
-                className={`max-w-full rounded-2xl px-4 py-2 ${
-                  message.role === "assistant"
-                    ? "bg-white/10 text-slate-100 self-start"
-                    : "bg-white text-slate-900 self-end"
-                }`}
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/20 bg-white/5 p-6 text-center text-slate-300">
+              <p className="text-sm">Need ideas or timing help?</p>
+              <button
+                type="button"
+                onClick={() => setIsChatOpen(true)}
+                className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold"
               >
-                {message.text}
-              </div>
-            ))}
+                Chat with Fonda
+              </button>
+            </div>
+          )}
+        </div>
+
+        </div>
+
+        <div className="lg:hidden">
+          <button
+            type="button"
+            onClick={() => setIsChatOpen(true)}
+            className="psychedelic-button w-full rounded-full py-3 text-sm font-semibold"
+          >
+            {isChatOpen ? "Fonda is open" : "Chat with Fonda"}
+          </button>
+        </div>
+
+        {isChatOpen && (
+          <div className="fixed inset-0 z-40 bg-black/70 px-4 py-6 lg:hidden">
+            <div className="mx-auto flex h-full max-w-md flex-col space-y-4 rounded-2xl border border-white/10 bg-[#050112] p-5">
+              {chatPanelContent}
+            </div>
           </div>
-          <form className="space-y-2 pt-2" onSubmit={sendChatMessage}>
-            <textarea
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              disabled={!isAuthenticated}
-              className="w-full rounded-2xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40 disabled:opacity-50"
-              rows={3}
-              placeholder={
-                isAuthenticated
-                  ? "Ask Fonda for restaurant ideas, better routing, or vibe-matched suggestions."
-                  : "Sign in to chat with Fonda."
-              }
-            />
-            <button
-              type="submit"
-              disabled={!isAuthenticated || chatLoading || !chatInput.trim()}
-              className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Send to Fonda
-            </button>
-          </form>
-        </section>
+        )}
       </main>
     </div>
   );
