@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 
 import { useAuth } from "@/components/auth-provider";
@@ -21,6 +22,23 @@ type TripDay = {
   notes?: string | null;
   activities?: Activity[];
 };
+
+type PlaceSuggestion = {
+  placeId: string;
+  description: string;
+  primary: string;
+  secondary?: string;
+};
+
+type DayPlaceLookup = Record<
+  string,
+  {
+    placeId: string;
+    description: string;
+    lat: number;
+    lng: number;
+  }
+>;
 
 type Trip = {
   id: string;
@@ -101,6 +119,17 @@ export function TripDashboard() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [cityQuery, setCityQuery] = useState("");
+  const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
+  const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
+  const [citySuggestionsError, setCitySuggestionsError] = useState<string | null>(null);
+  const [cityDetailsLoading, setCityDetailsLoading] = useState(false);
+  const [dayPlaces, setDayPlaces] = useState<DayPlaceLookup>({});
+  const suggestionsAbortRef = useRef<AbortController | null>(null);
+  const createPlacesToken = () =>
+    typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11);
+  const [placesSessionToken, setPlacesSessionToken] = useState<string>(createPlacesToken);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const isAuthenticated = Boolean(user && idToken);
   const authHeaders = useMemo(() => {
@@ -162,11 +191,13 @@ export function TripDashboard() {
       const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
       return aTime - bTime;
     });
+  const selectedDayPlace = selectedDayId ? dayPlaces[selectedDayId] : null;
 
   useEffect(() => {
     if (!selectedTrip) {
       setSelectedDayId(null);
       setDayForm(emptyDayForm);
+      setCityQuery("");
       return;
     }
     const exists = selectedTrip.days.some((day) => day.id === selectedDayId);
@@ -180,17 +211,56 @@ export function TripDashboard() {
       setDayForm({ city: selectedDay.city, notes: selectedDay.notes || "" });
       setEditingActivityId(null);
       setActivityForm(emptyActivityForm);
+      setCityQuery(dayPlaces[selectedDay.id]?.description || selectedDay.city || "");
     } else {
       setDayForm(emptyDayForm);
+      setCityQuery("");
     }
-  }, [selectedDay]);
+  }, [selectedDay, dayPlaces]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.innerWidth >= 1024) {
       setIsChatOpen(true);
     }
-  }, []);
+  }, [setIsChatOpen]);
+
+  useEffect(() => {
+    if (!cityQuery || cityQuery.length < 2) {
+      setCitySuggestions([]);
+      setCitySuggestionsError(null);
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      try {
+        suggestionsAbortRef.current?.abort();
+        const controller = new AbortController();
+        suggestionsAbortRef.current = controller;
+        setCitySuggestionsLoading(true);
+        setCitySuggestionsError(null);
+        const params = new URLSearchParams({ query: cityQuery });
+        if (placesSessionToken) params.set("sessionToken", placesSessionToken);
+        const response = await fetch(`/api/maps/autocomplete?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body?.error || "Autocomplete failed");
+        }
+        const data = await response.json();
+        setCitySuggestions(data.predictions || []);
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        console.error("Autocomplete error", err);
+        setCitySuggestionsError(err instanceof Error ? err.message : "Autocomplete failed");
+      } finally {
+        setCitySuggestionsLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(handler);
+  }, [cityQuery, placesSessionToken]);
 
   async function createTrip(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -388,6 +458,56 @@ export function TripDashboard() {
   function cancelActivityEdit() {
     setEditingActivityId(null);
     setActivityForm(emptyActivityForm);
+  }
+
+  function handleCityInputChange(value: string) {
+    setCityQuery(value);
+    setCitySuggestionsError(null);
+    setDayForm((prev) => ({ ...prev, city: value }));
+    if (selectedDayId && dayPlaces[selectedDayId] && value.trim() !== dayPlaces[selectedDayId].description) {
+      setDayPlaces((prev) => {
+        const clone = { ...prev };
+        delete clone[selectedDayId];
+        return clone;
+      });
+    }
+  }
+
+  async function handleCitySuggestionSelect(suggestion: PlaceSuggestion) {
+    setCityQuery(suggestion.description);
+    setDayForm((prev) => ({ ...prev, city: suggestion.description }));
+    setCitySuggestions([]);
+    setCitySuggestionsError(null);
+    setPlacesSessionToken(createPlacesToken());
+
+    if (!selectedDayId) return;
+    setCityDetailsLoading(true);
+    try {
+      const response = await fetch(`/api/maps/place?placeId=${suggestion.placeId}`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error || "Failed to load place");
+      }
+      const data = await response.json();
+      const lat = data.location?.lat;
+      const lng = data.location?.lng;
+      if (typeof lat === "number" && typeof lng === "number") {
+        setDayPlaces((prev) => ({
+          ...prev,
+          [selectedDayId]: {
+            placeId: data.placeId || suggestion.placeId,
+            description: data.address || suggestion.description,
+            lat,
+            lng,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error("Place details error", err);
+      setCitySuggestionsError(err instanceof Error ? err.message : "Failed to load place");
+    } finally {
+      setCityDetailsLoading(false);
+    }
   }
 
   async function sendChatMessage(event: React.FormEvent<HTMLFormElement>) {
@@ -705,203 +825,278 @@ export function TripDashboard() {
                     {selectedTrip.homeCity || clientEnv.NEXT_PUBLIC_DEFAULT_HOME_CITY}
                   </p>
                 </div>
+                {selectedTrip.days.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto rounded-full bg-white/5 px-2 py-1 text-xs">
+                    {selectedTrip.days.map((day) => (
+                      <button
+                        key={day.id}
+                        type="button"
+                        onClick={() => setSelectedDayId(day.id)}
+                        className={`rounded-full px-3 py-1 transition ${
+                          selectedDayId === day.id
+                            ? "bg-white text-slate-900"
+                            : "bg-transparent text-slate-200 hover:bg-white/10"
+                        }`}
+                      >
+                        {format(new Date(day.date), "MMM d")}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {selectedDay ? (
                   <div className="space-y-5">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Day overview</p>
-                    <h3 className="text-xl font-semibold text-white">
-                      {format(new Date(selectedDay.date), "EEEE, MMMM d")}
-                    </h3>
-                  </div>
-
-                  <form className="grid gap-4 md:grid-cols-2" onSubmit={saveDay}>
                     <div>
-                      <label className="text-xs text-slate-400" htmlFor="dayCity">
-                        City
-                      </label>
-                      <input
-                        id="dayCity"
-                        value={dayForm.city}
-                        onChange={(e) => setDayForm((prev) => ({ ...prev, city: e.target.value }))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-400" htmlFor="dayNotes">
-                        Notes / plans
-                      </label>
-                      <textarea
-                        id="dayNotes"
-                        rows={3}
-                        value={dayForm.notes}
-                        onChange={(e) => setDayForm((prev) => ({ ...prev, notes: e.target.value }))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                        placeholder="Morning wander, afternoon train, late dinner"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={savingDay}
-                      className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
-                    >
-                      {savingDay ? "Saving..." : "Save day"}
-                    </button>
-                  </form>
-
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Timeline</p>
-                      {orderedActivities.length ? (
-                        <ol className="space-y-2">
-                          {orderedActivities.map((activity) => (
-                            <li
-                              key={activity.id}
-                              className="rounded-2xl border border-white/10 bg-slate-900/30 px-4 py-2"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
-                                    {formatTimeRange(activity)}
-                                  </p>
-                                  <p className="text-sm font-semibold text-white">{activity.title}</p>
-                                  {activity.description && (
-                                    <p className="text-xs text-slate-400">{activity.description}</p>
-                                  )}
-                                </div>
-                                <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-300">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditActivity(activity)}
-                                    className="rounded-full border border-white/30 px-2 py-0.5 hover:border-white"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => deleteActivity(activity.id)}
-                                    className="rounded-full border border-white/30 px-2 py-0.5 text-rose-200 hover:border-rose-200"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ol>
-                      ) : (
-                        <p className="text-sm text-slate-400">No scheduled items yet.</p>
-                      )}
+                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Day overview</p>
+                      <h3 className="text-xl font-semibold text-white">
+                        {format(new Date(selectedDay.date), "EEEE, MMMM d")}
+                      </h3>
                     </div>
 
-                    <form className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/30 p-3" onSubmit={saveActivity}>
-                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
-                        {editingActivityId ? "Edit activity" : "Add activity"}
-                      </p>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="text-xs text-slate-400" htmlFor="startTime">
-                            Start
-                          </label>
-                          <input
-                            id="startTime"
-                            type="time"
-                            required
-                            value={activityForm.startTime}
-                            onChange={(e) => setActivityForm((prev) => ({ ...prev, startTime: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-400" htmlFor="endTime">
-                            End (optional)
-                          </label>
-                          <input
-                            id="endTime"
-                            type="time"
-                            value={activityForm.endTime}
-                            onChange={(e) => setActivityForm((prev) => ({ ...prev, endTime: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-400" htmlFor="activityTitle">
-                          Title
+                    <form className="grid gap-4 md:grid-cols-2" onSubmit={saveDay}>
+                      <div className="relative">
+                        <label className="text-xs text-slate-400" htmlFor="dayCity">
+                          City
                         </label>
                         <input
-                          id="activityTitle"
-                          required
-                          value={activityForm.title}
-                          onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                          placeholder="Midnight rooftop bar"
+                          id="dayCity"
+                          autoComplete="off"
+                          value={cityQuery}
+                          onChange={(e) => handleCityInputChange(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
                         />
-                      </div>
-                      <div>
-                        <textarea
-                          placeholder="Optional notes"
-                          value={activityForm.notes}
-                          onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                          rows={2}
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="submit"
-                          disabled={savingActivity}
-                          className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
-                        >
-                          {savingActivity
-                            ? "Saving..."
-                            : editingActivityId
-                            ? "Update activity"
-                            : "Add to timeline"}
-                        </button>
-                        {editingActivityId && (
-                          <button
-                            type="button"
-                            onClick={cancelActivityEdit}
-                            className="rounded-full border border-white/30 px-4 py-2 text-sm text-white transition hover:border-white"
-                          >
-                            Cancel
-                          </button>
+                        {(citySuggestionsLoading || cityDetailsLoading) && (
+                          <span className="absolute right-3 top-[30px] text-xs text-slate-400">
+                            {cityDetailsLoading ? "Loading place..." : "Searching..."}
+                          </span>
+                        )}
+                        {citySuggestionsError && (
+                          <p className="mt-1 text-xs text-rose-300">{citySuggestionsError}</p>
+                        )}
+                        {citySuggestions.length > 0 && cityQuery && (
+                          <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-2xl border border-white/10 bg-[#050112]/95 text-sm shadow-xl">
+                            {citySuggestions.map((suggestion) => (
+                              <li key={suggestion.placeId}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCitySuggestionSelect(suggestion)}
+                                  className="flex w-full flex-col items-start gap-0.5 px-4 py-2 text-left text-slate-100 hover:bg-white/10"
+                                >
+                                  <span className="font-medium">{suggestion.primary}</span>
+                                  {suggestion.secondary && (
+                                    <span className="text-xs text-slate-400">{suggestion.secondary}</span>
+                                  )}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </div>
+                      <div>
+                        <label className="text-xs text-slate-400" htmlFor="dayNotes">
+                          Notes / plans
+                        </label>
+                        <textarea
+                          id="dayNotes"
+                          rows={3}
+                          value={dayForm.notes}
+                          onChange={(e) => setDayForm((prev) => ({ ...prev, notes: e.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          placeholder="Morning wander, afternoon train, late dinner"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={savingDay}
+                        className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {savingDay ? "Saving..." : "Save day"}
+                      </button>
                     </form>
+
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Timeline</p>
+                        {orderedActivities.length ? (
+                          <ol className="space-y-2">
+                            {orderedActivities.map((activity) => (
+                              <li
+                                key={activity.id}
+                                className="rounded-2xl border border-white/10 bg-slate-900/30 px-4 py-2"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                                      {formatTimeRange(activity)}
+                                    </p>
+                                    <p className="text-sm font-semibold text-white">{activity.title}</p>
+                                    {activity.description && (
+                                      <p className="text-xs text-slate-400">{activity.description}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-300">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditActivity(activity)}
+                                      className="rounded-full border border-white/30 px-2 py-0.5 hover:border-white"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteActivity(activity.id)}
+                                      className="rounded-full border border-white/30 px-2 py-0.5 text-rose-200 hover:border-rose-200"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p className="text-sm text-slate-400">No scheduled items yet.</p>
+                        )}
+                      </div>
+
+                      <form className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/30 p-3" onSubmit={saveActivity}>
+                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                          {editingActivityId ? "Edit activity" : "Add activity"}
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="text-xs text-slate-400" htmlFor="startTime">
+                              Start
+                            </label>
+                            <input
+                              id="startTime"
+                              type="time"
+                              required
+                              value={activityForm.startTime}
+                              onChange={(e) => setActivityForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-slate-400" htmlFor="endTime">
+                              End (optional)
+                            </label>
+                            <input
+                              id="endTime"
+                              type="time"
+                              value={activityForm.endTime}
+                              onChange={(e) => setActivityForm((prev) => ({ ...prev, endTime: e.target.value }))}
+                              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-400" htmlFor="activityTitle">
+                            Title
+                          </label>
+                          <input
+                            id="activityTitle"
+                            required
+                            value={activityForm.title}
+                            onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            placeholder="Midnight rooftop bar"
+                          />
+                        </div>
+                        <div>
+                          <textarea
+                            placeholder="Optional notes"
+                            value={activityForm.notes}
+                            onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            rows={2}
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="submit"
+                            disabled={savingActivity}
+                            className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {savingActivity
+                              ? "Saving..."
+                              : editingActivityId
+                              ? "Update activity"
+                              : "Add to timeline"}
+                          </button>
+                          {editingActivityId && (
+                            <button
+                              type="button"
+                              onClick={cancelActivityEdit}
+                              className="rounded-full border border-white/30 px-4 py-2 text-sm text-white transition hover:border-white"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </form>
+                    </div>
+
+                    {selectedDayPlace && (
+                      <div className="space-y-2 rounded-2xl border border-white/10 bg-slate-900/30 p-3">
+                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">City map</p>
+                        <div className="overflow-hidden rounded-xl border border-white/10">
+                          <Image
+                            src={`/api/maps/static?lat=${selectedDayPlace.lat}&lng=${selectedDayPlace.lng}`}
+                            alt={`Map of ${selectedDayPlace.description}`}
+                            width={1200}
+                            height={640}
+                            className="h-48 w-full object-cover"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1 text-sm text-slate-200 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="font-medium text-white">{selectedDayPlace.description}</p>
+                            <p className="text-xs text-slate-400">
+                              {selectedDayPlace.lat.toFixed(3)}, {selectedDayPlace.lng.toFixed(3)}
+                            </p>
+                          </div>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${selectedDayPlace.lat},${selectedDayPlace.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-full border border-white/30 px-4 py-1 text-xs uppercase tracking-[0.3em] text-white transition hover:border-white"
+                          >
+                            Open maps
+                          </a>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400">Select a day to edit it.</p>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-400">
-              Select or create a trip to start planning.
-            </div>
-          )}
-        </section>
+                ) : (
+                  <p className="text-sm text-slate-400">Select a day to edit it.</p>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-400">
+                Select or create a trip to start planning.
+              </div>
+            )}
+          </section>
 
-        <div className="hidden lg:flex">
-          {isChatOpen ? (
-            <div className="flex h-full flex-col space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
-              {chatPanelContent}
-            </div>
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/20 bg-white/5 p-6 text-center text-slate-300">
-              <p className="text-sm">Need ideas or timing help?</p>
-              <button
-                type="button"
-                onClick={() => setIsChatOpen(true)}
-                className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold"
-              >
-                Chat with Fonda
-              </button>
-            </div>
-          )}
-        </div>
-
+          <div className="hidden lg:flex">
+            {isChatOpen ? (
+              <div className="flex h-full flex-col space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+                {chatPanelContent}
+              </div>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/20 bg-white/5 p-6 text-center text-slate-300">
+                <p className="text-sm">Need ideas or timing help?</p>
+                <button
+                  type="button"
+                  onClick={() => setIsChatOpen(true)}
+                  className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold"
+                >
+                  Chat with Fonda
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="lg:hidden">
