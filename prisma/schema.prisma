@@ -69,6 +69,7 @@ model Activity {
   title       String
   type        String?
   description String?
+  location    String?
   source      ActivitySource  @default(manual)
   startTime   DateTime?
   endTime     DateTime?

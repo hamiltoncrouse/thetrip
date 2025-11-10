@@ -9,6 +9,7 @@ const updateActivitySchema = z.object({
   notes: z.string().optional(),
   startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  location: z.string().optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -77,6 +78,7 @@ export async function PATCH(
     const updates: Record<string, unknown> = {};
     if (parsed.data.title !== undefined) updates.title = parsed.data.title;
     if (parsed.data.notes !== undefined) updates.description = parsed.data.notes;
+    if (parsed.data.location !== undefined) updates.location = parsed.data.location || null;
 
     if (parsed.data.startTime) {
       const value = combineDateWithTime(existing.tripDay.date, parsed.data.startTime);

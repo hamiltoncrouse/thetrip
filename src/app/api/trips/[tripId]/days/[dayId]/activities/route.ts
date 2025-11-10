@@ -9,6 +9,7 @@ const createActivitySchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   notes: z.string().optional(),
+  location: z.string().optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -78,6 +79,7 @@ export async function POST(
         tripDayId: dayId,
         title: parsed.data.title,
         description: parsed.data.notes || null,
+        location: parsed.data.location || null,
         startTime,
         endTime,
       },

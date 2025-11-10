@@ -13,6 +13,7 @@ type Activity = {
   description?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  location?: string | null;
 };
 
 type TripDay = {
@@ -81,6 +82,7 @@ const emptyActivityForm = {
   startTime: "",
   endTime: "",
   notes: "",
+  location: "",
 };
 
 const initialChat: ChatMessage[] = [
@@ -432,6 +434,7 @@ export function TripDashboard() {
       startTime: activityForm.startTime,
       endTime: activityForm.endTime || undefined,
       notes: activityForm.notes || undefined,
+      location: activityForm.location || undefined,
     };
 
     try {
@@ -521,6 +524,7 @@ export function TripDashboard() {
       startTime: activity.startTime ? format(new Date(activity.startTime), "HH:mm") : "",
       endTime: activity.endTime ? format(new Date(activity.endTime), "HH:mm") : "",
       notes: activity.description || "",
+      location: activity.location || "",
     });
   }
 
@@ -1003,11 +1007,16 @@ export function TripDashboard() {
                                     <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
                                       {formatTimeRange(activity)}
                                     </p>
-                                    <p className="text-sm font-semibold text-white">{activity.title}</p>
-                                    {activity.description && (
-                                      <p className="text-xs text-slate-400">{activity.description}</p>
-                                    )}
-                                  </div>
+                                  <p className="text-sm font-semibold text-white">{activity.title}</p>
+                                  {activity.description && (
+                                    <p className="text-xs text-slate-400">{activity.description}</p>
+                                  )}
+                                  {activity.location && (
+                                    <p className="text-xs text-slate-300">
+                                      {activity.location}
+                                    </p>
+                                  )}
+                                </div>
                                   <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-300">
                                     <button
                                       type="button"
@@ -1048,7 +1057,7 @@ export function TripDashboard() {
                               required
                               value={activityForm.startTime}
                               onChange={(e) => setActivityForm((prev) => ({ ...prev, startTime: e.target.value }))}
-                              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                              className="mt-1 w-full rounded-xl border border-white/30 bg-white/15 px-3 py-2 text-sm text-white outline-none placeholder-white/70 focus:border-white/70"
                             />
                           </div>
                           <div>
@@ -1060,15 +1069,15 @@ export function TripDashboard() {
                               type="time"
                               value={activityForm.endTime}
                               onChange={(e) => setActivityForm((prev) => ({ ...prev, endTime: e.target.value }))}
-                              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                              className="mt-1 w-full rounded-xl border border-white/30 bg-white/15 px-3 py-2 text-sm text-white outline-none placeholder-white/70 focus:border-white/70"
                             />
                           </div>
                         </div>
-                        <div>
-                          <label className="text-xs text-slate-400" htmlFor="activityTitle">
-                            Title
-                          </label>
-                          <input
+                      <div>
+                        <label className="text-xs text-slate-400" htmlFor="activityTitle">
+                          Title
+                        </label>
+                        <input
                             id="activityTitle"
                             required
                             value={activityForm.title}
@@ -1084,6 +1093,18 @@ export function TripDashboard() {
                             onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))}
                             className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
                             rows={2}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-400" htmlFor="activityLocation">
+                            Address (optional)
+                          </label>
+                          <input
+                            id="activityLocation"
+                            value={activityForm.location}
+                            onChange={(e) => setActivityForm((prev) => ({ ...prev, location: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            placeholder="123 Rue Oberkampf, Paris"
                           />
                         </div>
                         <div className="flex flex-wrap gap-2">
