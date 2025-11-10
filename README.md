@@ -37,7 +37,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=""
 ### Authentication
 - Create/reuse a Firebase project (you can keep using `room-eadab`).
 - **Server config**: Firebase Console → Project Settings → Service Accounts → generate a private key and paste the JSON (single line) into `FIREBASE_SERVICE_ACCOUNT` (Render env).
-- **Client config**: Firebase Console → Project Settings → General → Web app → copy the config snippet into the `NEXT_PUBLIC_FIREBASE_*` variables.
+- **Client config**: Firebase Console → Project Settings → General → Web app → copy the config snippet into the `NEXT_PUBLIC_FIREBASE_*` variables. Also add your Render domain (e.g., `https://thetrip.onrender.com`) and local dev host (`http://localhost:3000`) to **Authentication → Settings → Authorized domains** so Firebase allows the OAuth popup.
 - Every API route that touches trip data now expects a Firebase ID token header: `Authorization: Bearer <firebase-id-token>`.
 - The server verifies the token, upserts the user in Postgres, and seeds credits from `STARTING_CREDITS`. Without a valid token the API responds with `401`.
 - **Demo mode**: if you haven’t wired Firebase client config yet, the dashboard can still create trips by sending a lightweight “demo profile” (name/email). The API accepts that payload via the `X-Trip-Demo-User` header and writes trips under a deterministic `demo-<name>` user ID.
