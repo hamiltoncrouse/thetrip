@@ -40,7 +40,6 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=""
 - **Client config**: Firebase Console → Project Settings → General → Web app → copy the config snippet into the `NEXT_PUBLIC_FIREBASE_*` variables. Also add your Render domain (e.g., `https://thetrip.onrender.com`) and local dev host (`http://localhost:3000`) to **Authentication → Settings → Authorized domains** so Firebase allows the OAuth popup.
 - Every API route that touches trip data now expects a Firebase ID token header: `Authorization: Bearer <firebase-id-token>`.
 - The server verifies the token, upserts the user in Postgres, and seeds credits from `STARTING_CREDITS`. Without a valid token the API responds with `401`.
-- **Demo mode**: if you haven’t wired Firebase client config yet, the dashboard can still create trips by sending a lightweight “demo profile” (name/email). The API accepts that payload via the `X-Trip-Demo-User` header and writes trips under a deterministic `demo-<name>` user ID.
 
 ## Database & Prisma
 Render’s managed Postgres roles cannot use `pg_terminate_backend`, so `prisma migrate dev` will fail. Instead:
@@ -71,8 +70,7 @@ The landing page introduces The Trip. API routes are namespaced at `/api/*`; you
 
 ## Dashboard UI
 - Visit `/dashboard` to use the new trip list + creation flow.
-- Sign in with Google (Firebase Auth) to load trips from `/api/trips` and create new ones. The UI automatically attaches your ID token to each request.
-- Without the Firebase web config, use the “Demo profile” card to enter a name/email; the dashboard will persist it in `localStorage` and send it via `X-Trip-Demo-User` so each visitor still gets isolated trips.
+- Sign in with Google (Firebase Auth) to load trips from `/api/trips` and create new ones. The UI automatically attaches your ID token to each request. Without Firebase client config the dashboard will prompt you to add the missing `NEXT_PUBLIC_FIREBASE_*` env vars on Render.
 
 ## Deploying to Render
 1. **Render Postgres**: reuse the `my-data-vibe` instance or create a new database. Copy the *External Database URL* into the Web Service env.

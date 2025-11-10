@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
-import { resolveAccount } from "@/lib/request-account";
-import { AuthError } from "@/lib/auth";
+import { authenticateRequest, AuthError } from "@/lib/auth";
 
 const updateDaySchema = z.object({
   city: z.string().optional(),
@@ -22,7 +21,7 @@ export async function PATCH(
   context: { params: Promise<{ tripId: string; dayId: string }> },
 ) {
   try {
-    const { account } = await resolveAccount(request);
+    const { account } = await authenticateRequest(request);
     const json = await request.json();
     const parsed = updateDaySchema.safeParse(json);
 

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { AuthError } from "@/lib/auth";
-import { resolveAccount } from "@/lib/request-account";
+import { authenticateRequest, AuthError } from "@/lib/auth";
 
 const createTripSchema = z.object({
   title: z.string().min(1),
@@ -43,7 +42,7 @@ function handleAuthError(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const { account } = await resolveAccount(request);
+    const { account } = await authenticateRequest(request);
     const trips = await prisma.trip.findMany({
       where: { userId: account.id },
       orderBy: { createdAt: "desc" },
@@ -79,7 +78,7 @@ export async function GET(request: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { account } = await resolveAccount(req);
+    const { account } = await authenticateRequest(req);
     const json = await req.json();
   const parsed = createTripSchema.safeParse(json);
 
