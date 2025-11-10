@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
@@ -18,8 +18,8 @@ function handleAuthError(error: unknown) {
 }
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { tripId: string; dayId: string } },
+  request: NextRequest,
+  context: { params: { tripId: string; dayId: string } },
 ) {
   try {
     const { account } = await resolveAccount(request);
@@ -33,7 +33,7 @@ export async function PATCH(
       );
     }
 
-    const { tripId, dayId } = params;
+    const { tripId, dayId } = context.params;
 
     const day = await prisma.tripDay.findFirst({
       where: {
