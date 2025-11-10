@@ -6,35 +6,41 @@ import { format } from "date-fns";
 import { useAuth } from "@/components/auth-provider";
 import { clientEnv } from "@/lib/env";
 
-interface Activity {
+type Activity = {
   id: string;
   title: string;
   description?: string | null;
   startTime?: string | null;
-}
+  endTime?: string | null;
+};
 
-interface TripDay {
+type TripDay = {
   id: string;
   date: string;
   city: string;
   notes?: string | null;
   activities?: Activity[];
-}
+};
 
-interface Trip {
+type Trip = {
   id: string;
   title: string;
   description?: string | null;
   homeCity?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
   days: TripDay[];
-  createdAt: string;
-}
+};
 
-interface TripsResponse {
+type TripsResponse = {
   trips: Trip[];
-}
+};
+
+type ChatMessage = {
+  id: string;
+  role: "assistant" | "user";
+  text: string;
+};
+
+const randomId = () => Math.random().toString(36).slice(2, 11);
 
 const emptyTripForm = {
   title: "",
@@ -51,8 +57,29 @@ const emptyDayForm = {
 
 const emptyActivityForm = {
   title: "",
-  time: "",
+  startTime: "",
+  endTime: "",
   notes: "",
+};
+
+const initialChat: ChatMessage[] = [
+  {
+    id: "intro",
+    role: "assistant",
+    text: "Hey, I’m Fonda — your neon-loving travel consultant. Ask me for riffs on routes, timing tweaks, or secret detours whenever you need a spark.",
+  },
+];
+
+const formatTime = (iso?: string | null) => {
+  if (!iso) return "--:--";
+  const date = new Date(iso);
+  // Use the stored UTC time so wall-clock values match the inputs regardless of viewer timezone
+  return date.toISOString().slice(11, 16);
+};
+const formatTimeRange = (activity: Activity) => {
+  const start = formatTime(activity.startTime);
+  const end = activity.endTime ? formatTime(activity.endTime) : null;
+  return end ? `${start} – ${end}` : start;
 };
 
 export function TripDashboard() {
@@ -61,13 +88,18 @@ export function TripDashboard() {
   const [loadingTrips, setLoadingTrips] = useState(false);
   const [tripError, setTripError] = useState<string | null>(null);
   const [tripForm, setTripForm] = useState(emptyTripForm);
+  const [showTripForm, setShowTripForm] = useState(false);
   const [creatingTrip, setCreatingTrip] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [dayForm, setDayForm] = useState(emptyDayForm);
   const [savingDay, setSavingDay] = useState(false);
   const [activityForm, setActivityForm] = useState(emptyActivityForm);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [savingActivity, setSavingActivity] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   const isAuthenticated = Boolean(user && idToken);
   const authHeaders = useMemo(() => {
@@ -75,10 +107,14 @@ export function TripDashboard() {
     return { Authorization: `Bearer ${idToken}` } satisfies HeadersInit;
   }, [idToken]);
 
+  const jsonHeaders = useMemo(() => {
+    const base: Record<string, string> = { "Content-Type": "application/json" };
+    if (idToken) base.Authorization = `Bearer ${idToken}`;
+    return base;
+  }, [idToken]);
+
   const headline = useMemo(() => {
-    if (!isAuthenticated) {
-      return firebaseConfigured ? "Sign in to start" : "Configure Firebase";
-    }
+    if (!isAuthenticated) return firebaseConfigured ? "Sign in to start" : "Configure Firebase";
     if (!trips.length) return "Create your first trip";
     return "Your active trips";
   }, [firebaseConfigured, isAuthenticated, trips.length]);
@@ -141,6 +177,8 @@ export function TripDashboard() {
   useEffect(() => {
     if (selectedDay) {
       setDayForm({ city: selectedDay.city, notes: selectedDay.notes || "" });
+      setEditingActivityId(null);
+      setActivityForm(emptyActivityForm);
     } else {
       setDayForm(emptyDayForm);
     }
@@ -154,10 +192,7 @@ export function TripDashboard() {
     try {
       const res = await fetch("/api/trips", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
-        },
+        headers: jsonHeaders,
         body: JSON.stringify({
           title: tripForm.title,
           description: tripForm.description || undefined,
@@ -173,6 +208,7 @@ export function TripDashboard() {
       const data = await res.json();
       setTrips((prev) => [data.trip as Trip, ...prev]);
       setTripForm(emptyTripForm);
+      setShowTripForm(false);
       setSelectedTripId(data.trip.id);
       setSelectedDayId(data.trip.days[0]?.id ?? null);
     } catch (err) {
@@ -210,10 +246,7 @@ export function TripDashboard() {
     try {
       const res = await fetch(`/api/trips/${selectedTrip.id}/days/${selectedDay.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
-        },
+        headers: jsonHeaders,
         body: JSON.stringify({ city: dayForm.city, notes: dayForm.notes }),
       });
       if (!res.ok) {
@@ -242,30 +275,34 @@ export function TripDashboard() {
     }
   }
 
-  async function createActivity(event: React.FormEvent<HTMLFormElement>) {
+  async function saveActivity(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedTrip || !selectedDay) return;
+    if (!selectedTrip || !selectedDay || !activityForm.title || !activityForm.startTime) return;
     setSavingActivity(true);
     setTripError(null);
+    const payload = {
+      title: activityForm.title,
+      startTime: activityForm.startTime,
+      endTime: activityForm.endTime || undefined,
+      notes: activityForm.notes || undefined,
+    };
+
     try {
-      const res = await fetch(`/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
-        },
-        body: JSON.stringify({
-          title: activityForm.title,
-          startTime: activityForm.time,
-          notes: activityForm.notes || undefined,
-        }),
+      const endpoint = editingActivityId
+        ? `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities/${editingActivityId}`
+        : `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`;
+      const res = await fetch(endpoint, {
+        method: editingActivityId ? "PATCH" : "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Failed to add activity (${res.status})`);
+        throw new Error(body?.error || `Failed to save activity (${res.status})`);
       }
       const data = await res.json();
       setActivityForm(emptyActivityForm);
+      setEditingActivityId(null);
       setTrips((prev) =>
         prev.map((trip) =>
           trip.id === selectedTrip.id
@@ -273,7 +310,14 @@ export function TripDashboard() {
                 ...trip,
                 days: trip.days.map((day) =>
                   day.id === selectedDay.id
-                    ? { ...day, activities: [...(day.activities || []), data.activity] }
+                    ? {
+                        ...day,
+                        activities: editingActivityId
+                          ? day.activities?.map((activity) =>
+                              activity.id === data.activity.id ? data.activity : activity,
+                            )
+                          : [...(day.activities || []), data.activity],
+                      }
                     : day,
                 ),
               }
@@ -281,9 +325,103 @@ export function TripDashboard() {
         ),
       );
     } catch (err) {
-      setTripError(err instanceof Error ? err.message : "Failed to add activity");
+      setTripError(err instanceof Error ? err.message : "Failed to save activity");
     } finally {
       setSavingActivity(false);
+    }
+  }
+
+  async function deleteActivity(activityId: string) {
+    if (!selectedTrip || !selectedDay) return;
+    try {
+      const res = await fetch(
+        `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities/${activityId}`,
+        {
+          method: "DELETE",
+          headers: authHeaders,
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to delete activity (${res.status})`);
+      }
+      setTrips((prev) =>
+        prev.map((trip) =>
+          trip.id === selectedTrip.id
+            ? {
+                ...trip,
+                days: trip.days.map((day) =>
+                  day.id === selectedDay.id
+                    ? {
+                        ...day,
+                        activities: (day.activities || []).filter((activity) => activity.id !== activityId),
+                      }
+                    : day,
+                ),
+              }
+            : trip,
+        ),
+      );
+    } catch (err) {
+      setTripError(err instanceof Error ? err.message : "Failed to delete activity");
+    }
+  }
+
+  function handleEditActivity(activity: Activity) {
+    setEditingActivityId(activity.id);
+    setActivityForm({
+      title: activity.title,
+      startTime: activity.startTime ? format(new Date(activity.startTime), "HH:mm") : "",
+      endTime: activity.endTime ? format(new Date(activity.endTime), "HH:mm") : "",
+      notes: activity.description || "",
+    });
+  }
+
+  function cancelActivityEdit() {
+    setEditingActivityId(null);
+    setActivityForm(emptyActivityForm);
+  }
+
+  async function sendChatMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!chatInput.trim() || !isAuthenticated) return;
+    const trimmed = chatInput.trim();
+    setChatMessages((prev) => [...prev, { id: randomId(), role: "user", text: trimmed }]);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const res = await fetch("/api/ai/suggestions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeaders ?? {}),
+        },
+        body: JSON.stringify({
+          city: selectedDay?.city || selectedTrip?.homeCity || "your current locale",
+          day: selectedDay?.date,
+          interests: [trimmed],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const items: Array<{ title?: string; description?: string }> = data.items || [];
+      const response =
+        items.length > 0
+          ? `Here’s a thread to pull:\n${items
+              .map((item) => `• ${item.title || "Idea"}: ${item.description || "Give it a whirl."}`)
+              .join("\n")}`
+          : data.error || "Couldn’t reach my data sources, but I’ll keep watching the map for ideas.";
+      setChatMessages((prev) => [...prev, { id: randomId(), role: "assistant", text: response }]);
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: randomId(),
+          role: "assistant",
+          text: err instanceof Error ? err.message : "Fonda hit a snag reaching the APIs. Try again in a beat.",
+        },
+      ]);
+    } finally {
+      setChatLoading(false);
     }
   }
 
@@ -322,8 +460,8 @@ export function TripDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 lg:flex-row">
-        <section className="space-y-4 lg:w-[320px]">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 lg:grid lg:grid-cols-[280px,minmax(0,1fr),280px]">
+        <section className="space-y-4">
           <div>
             <p className="text-sm uppercase tracking-[0.4em] text-slate-500">Trips</p>
             <h2 className="text-3xl font-semibold text-white">{headline}</h2>
@@ -342,7 +480,7 @@ export function TripDashboard() {
               {loadingTrips && <p className="text-sm text-slate-400">Loading trips...</p>}
               {!loadingTrips && !trips.length && (
                 <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-slate-400">
-                  No trips yet. Use the form below to create one.
+                  No trips yet. Tap “New trip” to begin.
                 </div>
               )}
               <div className="grid gap-4">
@@ -360,7 +498,7 @@ export function TripDashboard() {
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <h3 className="text-xl font-semibold text-white">{trip.title}</h3>
-                        <p className="text-sm text-slate-400">{trip.homeCity || clientEnv.NEXT_PUBLIC_DEFAULT_HOME_CITY}</p>
+                        <p className="text-sm text-slate-400">{trip.homeCity || "Anywhere"}</p>
                       </div>
                       <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-400">
                         <span>{trip.days.length} days</span>
@@ -382,97 +520,100 @@ export function TripDashboard() {
                   </article>
                 ))}
               </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <button
+                  type="button"
+                  onClick={() => setShowTripForm((prev) => !prev)}
+                  className="w-full rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition hover:border-white"
+                >
+                  {showTripForm ? "Hide trip form" : "+ New trip"}
+                </button>
+                {showTripForm && (
+                  <form className="mt-4 space-y-4" onSubmit={createTrip}>
+                    <div>
+                      <label className="text-sm text-slate-300" htmlFor="title">
+                        Trip title
+                      </label>
+                      <input
+                        id="title"
+                        required
+                        value={tripForm.title}
+                        onChange={(e) => setTripForm((prev) => ({ ...prev, title: e.target.value }))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        placeholder="Sunrise Circuit"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-300" htmlFor="homeCity">
+                        Base city
+                      </label>
+                      <input
+                        id="homeCity"
+                        value={tripForm.homeCity}
+                        onChange={(e) => setTripForm((prev) => ({ ...prev, homeCity: e.target.value }))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        placeholder="Lisbon"
+                      />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="text-sm text-slate-300" htmlFor="startDate">
+                          Start date
+                        </label>
+                        <input
+                          id="startDate"
+                          type="date"
+                          value={tripForm.startDate}
+                          onChange={(e) => setTripForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-slate-300" htmlFor="endDate">
+                          End date
+                        </label>
+                        <input
+                          id="endDate"
+                          type="date"
+                          value={tripForm.endDate}
+                          onChange={(e) => setTripForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-300" htmlFor="description">
+                        Notes
+                      </label>
+                      <textarea
+                        id="description"
+                        value={tripForm.description}
+                        onChange={(e) => setTripForm((prev) => ({ ...prev, description: e.target.value }))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        rows={3}
+                        placeholder="Solo rail loop, keep afternoons free for galleries"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={creatingTrip}
+                      className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {creatingTrip ? "Creating..." : "Create trip"}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-slate-400">
               {status === "loading" ? "Checking your session..." : "Sign in with Google to load your trips."}
             </div>
           )}
-
-          <div>
-            <p className="text-sm uppercase tracking-[0.4em] text-slate-500">New trip</p>
-            <h2 className="text-2xl font-semibold text-white">Blueprint a new adventure</h2>
-          </div>
-          {isAuthenticated ? (
-            <form className="space-y-4" onSubmit={createTrip}>
-              <div>
-                <label className="text-sm text-slate-300" htmlFor="title">
-                  Title
-                </label>
-                <input
-                  id="title"
-                  required
-                  value={tripForm.title}
-                  onChange={(e) => setTripForm((prev) => ({ ...prev, title: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  placeholder="June in France"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300" htmlFor="homeCity">
-                  Home city
-                </label>
-                <input
-                  id="homeCity"
-                  value={tripForm.homeCity}
-                  onChange={(e) => setTripForm((prev) => ({ ...prev, homeCity: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  placeholder="Paris"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm text-slate-300" htmlFor="startDate">
-                    Start date
-                  </label>
-                  <input
-                    id="startDate"
-                    type="date"
-                    value={tripForm.startDate}
-                    onChange={(e) => setTripForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-300" htmlFor="endDate">
-                    End date
-                  </label>
-                  <input
-                    id="endDate"
-                    type="date"
-                    value={tripForm.endDate}
-                    onChange={(e) => setTripForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-slate-300" htmlFor="description">
-                  Notes
-                </label>
-                <textarea
-                  id="description"
-                  value={tripForm.description}
-                  onChange={(e) => setTripForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  rows={3}
-                  placeholder="Anniversary week, focus on Nice + Paris"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={creatingTrip}
-                className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
-              >
-                {creatingTrip ? "Creating..." : "Create trip"}
-              </button>
-            </form>
-          ) : (
-            <p className="text-sm text-slate-400">Sign in with Google above to unlock the trip builder.</p>
-          )}
         </section>
 
-        <section className="flex-1 space-y-4">
+        <section className="space-y-4">
           {selectedTrip ? (
             <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -532,7 +673,7 @@ export function TripDashboard() {
                         value={dayForm.notes}
                         onChange={(e) => setDayForm((prev) => ({ ...prev, notes: e.target.value }))}
                         className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                        placeholder="Morning in Le Marais, train to Nice at 5 PM"
+                        placeholder="Morning wander, afternoon train, late dinner"
                       />
                     </div>
                     <button
@@ -543,8 +684,8 @@ export function TripDashboard() {
                       {savingDay ? "Saving..." : "Save day"}
                     </button>
                   </form>
-
-                  <div className="space-y-3">
+*** End Patch
+                  <div className="space-y-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Timeline</p>
                       {orderedActivities.length ? (
@@ -554,15 +695,33 @@ export function TripDashboard() {
                               key={activity.id}
                               className="rounded-2xl border border-white/10 bg-slate-900/30 px-4 py-3"
                             >
-                              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
-                                {activity.startTime
-                                  ? format(new Date(activity.startTime), "HH:mm")
-                                  : "--:--"}
-                              </p>
-                              <p className="text-sm font-semibold text-white">{activity.title}</p>
-                              {activity.description && (
-                                <p className="text-xs text-slate-400">{activity.description}</p>
-                              )}
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                                    {formatTimeRange(activity)}
+                                  </p>
+                                  <p className="text-sm font-semibold text-white">{activity.title}</p>
+                                  {activity.description && (
+                                    <p className="text-xs text-slate-400">{activity.description}</p>
+                                  )}
+                                </div>
+                                <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-300">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditActivity(activity)}
+                                    className="rounded-full border border-white/30 px-2 py-0.5 hover:border-white"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteActivity(activity.id)}
+                                    className="rounded-full border border-white/30 px-2 py-0.5 text-rose-200 hover:border-rose-200"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
                             </li>
                           ))}
                         </ol>
@@ -571,49 +730,81 @@ export function TripDashboard() {
                       )}
                     </div>
 
-                    <form className="grid gap-3 md:grid-cols-[120px_1fr]" onSubmit={createActivity}>
-                      <div>
-                        <label className="text-xs text-slate-400" htmlFor="activityTime">
-                          Time
-                        </label>
-                        <input
-                          id="activityTime"
-                          type="time"
-                          required
-                          value={activityForm.time}
-                          onChange={(e) => setActivityForm((prev) => ({ ...prev, time: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                        />
+                    <form className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/30 p-4" onSubmit={saveActivity}>
+                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                        {editingActivityId ? "Edit activity" : "Add activity"}
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="text-xs text-slate-400" htmlFor="startTime">
+                            Start
+                          </label>
+                          <input
+                            id="startTime"
+                            type="time"
+                            required
+                            value={activityForm.startTime}
+                            onChange={(e) => setActivityForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-400" htmlFor="endTime">
+                            End (optional)
+                          </label>
+                          <input
+                            id="endTime"
+                            type="time"
+                            value={activityForm.endTime}
+                            onChange={(e) => setActivityForm((prev) => ({ ...prev, endTime: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          />
+                        </div>
                       </div>
-                      <div className="md:col-span-1">
+                      <div>
                         <label className="text-xs text-slate-400" htmlFor="activityTitle">
-                          Activity
+                          Title
                         </label>
                         <input
                           id="activityTitle"
                           required
                           value={activityForm.title}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                          placeholder="Sunset at Pont Neuf"
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          placeholder="Midnight rooftop bar"
                         />
                       </div>
-                      <div className="md:col-span-2">
+                      <div>
                         <textarea
                           placeholder="Optional notes"
                           value={activityForm.notes}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
                           rows={2}
                         />
                       </div>
-                      <button
-                        type="submit"
-                        disabled={savingActivity}
-                        className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60 md:col-span-2"
-                      >
-                        {savingActivity ? "Adding..." : "Add to timeline"}
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          disabled={savingActivity}
+                          className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {savingActivity
+                            ? "Saving..."
+                            : editingActivityId
+                            ? "Update activity"
+                            : "Add to timeline"}
+                        </button>
+                        {editingActivityId && (
+                          <button
+                            type="button"
+                            onClick={cancelActivityEdit}
+                            className="rounded-full border border-white/30 px-4 py-2 text-sm text-white transition hover:border-white"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </form>
                   </div>
                 </div>
@@ -626,6 +817,53 @@ export function TripDashboard() {
               Select or create a trip to start planning.
             </div>
           )}
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Fonda</p>
+              <h2 className="text-xl font-semibold text-white">Travel consultant</h2>
+            </div>
+            {chatLoading && <span className="text-xs text-slate-300">thinking...</span>}
+          </div>
+          <div className="flex flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/30 p-4 text-sm"
+            style={{ maxHeight: "420px" }}
+          >
+            {chatMessages.map((message) => (
+              <div
+                key={message.id}
+                className={`max-w-full rounded-2xl px-4 py-2 ${
+                  message.role === "assistant"
+                    ? "bg-white/10 text-slate-100 self-start"
+                    : "bg-white text-slate-900 self-end"
+                }`}
+              >
+                {message.text}
+              </div>
+            ))}
+          </div>
+          <form className="space-y-2" onSubmit={sendChatMessage}>
+            <textarea
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              disabled={!isAuthenticated}
+              className="w-full rounded-2xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40 disabled:opacity-50"
+              rows={3}
+              placeholder={
+                isAuthenticated
+                  ? "Ask Fonda for restaurant ideas, better routing, or vibe-matched suggestions."
+                  : "Sign in to chat with Fonda."
+              }
+            />
+            <button
+              type="submit"
+              disabled={!isAuthenticated || chatLoading || !chatInput.trim()}
+              className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Send to Fonda
+            </button>
+          </form>
         </section>
       </main>
     </div>
