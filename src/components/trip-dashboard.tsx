@@ -14,6 +14,7 @@ type Activity = {
   startTime?: string | null;
   endTime?: string | null;
   location?: string | null;
+  startLocation?: string | null;
 };
 
 type TripDay = {
@@ -83,6 +84,7 @@ const emptyActivityForm = {
   endTime: "",
   notes: "",
   location: "",
+  startLocation: "",
 };
 
 const initialChat: ChatMessage[] = [
@@ -435,6 +437,7 @@ export function TripDashboard() {
       endTime: activityForm.endTime || undefined,
       notes: activityForm.notes || undefined,
       location: activityForm.location || undefined,
+      startLocation: activityForm.startLocation || undefined,
     };
 
     try {
@@ -525,6 +528,7 @@ export function TripDashboard() {
       endTime: activity.endTime ? format(new Date(activity.endTime), "HH:mm") : "",
       notes: activity.description || "",
       location: activity.location || "",
+      startLocation: activity.startLocation || "",
     });
   }
 
@@ -1016,6 +1020,11 @@ export function TripDashboard() {
                                       {activity.location}
                                     </p>
                                   )}
+                                  {activity.startLocation && (
+                                    <p className="text-xs text-slate-500">
+                                      Starts at {activity.startLocation}
+                                    </p>
+                                  )}
                                 </div>
                                   <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-300">
                                     <button
@@ -1086,27 +1095,39 @@ export function TripDashboard() {
                             placeholder="Midnight rooftop bar"
                           />
                         </div>
-                        <div>
-                          <textarea
-                            placeholder="Optional notes"
-                            value={activityForm.notes}
-                            onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                            rows={2}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-400" htmlFor="activityLocation">
-                            Address (optional)
-                          </label>
-                          <input
-                            id="activityLocation"
-                            value={activityForm.location}
-                            onChange={(e) => setActivityForm((prev) => ({ ...prev, location: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                            placeholder="123 Rue Oberkampf, Paris"
-                          />
-                        </div>
+                      <div>
+                        <textarea
+                          placeholder="Optional notes"
+                          value={activityForm.notes}
+                          onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400" htmlFor="activityLocation">
+                          Address (optional)
+                        </label>
+                        <input
+                          id="activityLocation"
+                          value={activityForm.location}
+                          onChange={(e) => setActivityForm((prev) => ({ ...prev, location: e.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          placeholder="123 Rue Oberkampf, Paris"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400" htmlFor="activityStartLocation">
+                          Starting address (optional)
+                        </label>
+                        <input
+                          id="activityStartLocation"
+                          value={activityForm.startLocation}
+                          onChange={(e) => setActivityForm((prev) => ({ ...prev, startLocation: e.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          placeholder="Hotel de Ville"
+                        />
+                      </div>
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="submit"

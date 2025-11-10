@@ -10,6 +10,7 @@ const createActivitySchema = z.object({
   endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   notes: z.string().optional(),
   location: z.string().optional(),
+  startLocation: z.string().optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -80,6 +81,7 @@ export async function POST(
         title: parsed.data.title,
         description: parsed.data.notes || null,
         location: parsed.data.location || null,
+        startLocation: parsed.data.startLocation || null,
         startTime,
         endTime,
       },
