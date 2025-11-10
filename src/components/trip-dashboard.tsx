@@ -643,7 +643,7 @@ export function TripDashboard() {
               </div>
 
               {selectedDay ? (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   <div>
                     <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Day overview</p>
                     <h3 className="text-xl font-semibold text-white">
@@ -684,16 +684,16 @@ export function TripDashboard() {
                       {savingDay ? "Saving..." : "Save day"}
                     </button>
                   </form>
-*** End Patch
-                  <div className="space-y-4">
+
+                  <div className="space-y-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Timeline</p>
                       {orderedActivities.length ? (
-                        <ol className="space-y-3">
+                        <ol className="space-y-2">
                           {orderedActivities.map((activity) => (
                             <li
                               key={activity.id}
-                              className="rounded-2xl border border-white/10 bg-slate-900/30 px-4 py-3"
+                              className="rounded-2xl border border-white/10 bg-slate-900/30 px-4 py-2"
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <div>
@@ -730,7 +730,7 @@ export function TripDashboard() {
                       )}
                     </div>
 
-                    <form className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/30 p-4" onSubmit={saveActivity}>
+                    <form className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/30 p-3" onSubmit={saveActivity}>
                       <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
                         {editingActivityId ? "Edit activity" : "Add activity"}
                       </p>

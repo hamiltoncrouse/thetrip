@@ -90,6 +90,50 @@ async function fetchGeminiSuggestions(city: string, day?: string, interests: str
   return parseSuggestions(text);
 }
 
+async function fetchOpenAISuggestions(city: string, day?: string, interests: string[] = []) {
+  if (!serverEnv.OPENAI_API_KEY) return [];
+  const prompt = buildPrompt(city, day, interests);
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${serverEnv.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: serverEnv.OPENAI_MODEL,
+      temperature: 0.6,
+      max_tokens: 600,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "fonda_suggestions",
+          schema: responseSchema,
+        },
+      },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Fonda, a travel-planning copilot. Always respond with valid JSON matching the provided schema.",
+        },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`OpenAI request failed (${response.status}): ${body}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  const text = Array.isArray(content)
+    ? content.map((part: { type?: string; text?: string }) => part.text || "").join("\n")
+    : content;
+  return parseSuggestions(text);
+}
+
 export async function POST(req: Request) {
   const json = await req.json();
   const parsed = suggestionSchema.safeParse(json);
@@ -104,8 +148,9 @@ export async function POST(req: Request) {
   const { city, day, interests = [] } = parsed.data;
 
   let items: Suggestion[] = [];
-  let source: "gemini" | "placeholder" | "error" = "placeholder";
+  let source: "gemini" | "openai" | "placeholder" | "error" = "placeholder";
   let errorMessage: string | undefined;
+
   try {
     const geminiSuggestions = await fetchGeminiSuggestions(city, day, interests);
     if (geminiSuggestions.length) {
@@ -116,6 +161,21 @@ export async function POST(req: Request) {
     console.error("Gemini suggestions failed", error);
     source = "error";
     errorMessage = error instanceof Error ? error.message : "Unknown Gemini error";
+  }
+
+  if (!items.length) {
+    try {
+      const openaiSuggestions = await fetchOpenAISuggestions(city, day, interests);
+      if (openaiSuggestions.length) {
+        items = openaiSuggestions;
+        source = "openai";
+      }
+    } catch (error) {
+      console.error("OpenAI suggestions failed", error);
+      source = "error";
+      const message = error instanceof Error ? error.message : "Unknown OpenAI error";
+      errorMessage = errorMessage ? `${errorMessage}; ${message}` : message;
+    }
   }
 
   if (!items.length) {
@@ -131,6 +191,9 @@ export async function POST(req: Request) {
         suggestedTime: "19:30",
       },
     ];
+    if (source !== "error") {
+      source = "placeholder";
+    }
   }
 
   return NextResponse.json({ city, day, items, source, error: errorMessage });
