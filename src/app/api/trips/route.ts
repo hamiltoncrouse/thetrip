@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         days: {
           orderBy: { date: "asc" },
           include: {
-            activities: true,
+            activities: { orderBy: { startTime: "asc" } },
             travelSegments: true,
             hotels: true,
           },
@@ -105,7 +105,12 @@ export async function POST(req: Request) {
           create: dayEntries,
         },
       },
-      include: { days: true },
+      include: {
+        days: {
+          orderBy: { date: "asc" },
+          include: { activities: { orderBy: { startTime: "asc" } } },
+        },
+      },
     });
 
     return NextResponse.json({ trip }, { status: 201 });

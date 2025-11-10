@@ -5,12 +5,12 @@ const features = [
   {
     title: "Neon Route Generator",
     emoji: "🌌",
-    description: "Gemini riffs on your vibe, time of day, and favorite arrondissement to sketch cinematic days in seconds.",
+    description: "Gemini riffs on your vibe, time of day, and favorite neighborhoods to sketch cinematic days in seconds.",
   },
   {
     title: "Trance Travel Timing",
     emoji: "🚀",
-    description: "Psychedelic dashboards warn when train transfers get sketchy and suggest smoother departure windows.",
+    description: "Psychedelic dashboards warn when transfers get sketchy and suggest smoother departure windows.",
   },
   {
     title: "Hotel Mood Board",
@@ -20,7 +20,7 @@ const features = [
   {
     title: "Groovy Copilot",
     emoji: "🌀",
-    description: "Chat with a helper that remembers your entire trip, then injects activities directly onto the calendar.",
+    description: "Chat with an assistant that remembers your entire trip, then injects activities directly onto the calendar.",
   },
 ];
 
@@ -35,7 +35,7 @@ export default function HomePage() {
             <span className="bg-gradient-to-r from-[#ff47da] via-[#66f6ff] to-[#ffb347] bg-clip-text text-transparent">
               The Trip
             </span>{" "}
-            planner for a cinematic France adventure
+            planner for a cinematic adventure anywhere on earth
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-slate-200">
             Neon gradients, AI riffs, and live data merge into a planner that feels like a midnight road movie: wild,

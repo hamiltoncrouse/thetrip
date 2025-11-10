@@ -6,7 +6,8 @@ import { authenticateRequest, AuthError } from "@/lib/auth";
 
 const createActivitySchema = z.object({
   title: z.string().min(1),
-  time: z.string().regex(/^\d{2}:\d{2}$/),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   notes: z.string().optional(),
 });
 
@@ -17,9 +18,15 @@ function handleAuthError(error: unknown) {
   return null;
 }
 
-function combineDateWithTime(date: Date, time: string) {
+function combineDateWithTime(dateValue: Date, time: string) {
   const [hours, minutes] = time.split(":" ).map((value) => Number.parseInt(value, 10));
-  const result = new Date(date);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+  const result = new Date(dateValue);
+  if (Number.isNaN(result.valueOf())) {
+    return null;
+  }
   result.setHours(hours, minutes, 0, 0);
   return result;
 }
@@ -52,7 +59,20 @@ export async function POST(
       return NextResponse.json({ error: "Day not found" }, { status: 404 });
     }
 
-    const startTime = combineDateWithTime(new Date(day.date), parsed.data.time);
+    const startTime = combineDateWithTime(new Date(day.date), parsed.data.startTime);
+    if (!startTime) {
+      return NextResponse.json({ error: "Invalid start time." }, { status: 400 });
+    }
+
+    let endTime = parsed.data.endTime
+      ? combineDateWithTime(new Date(day.date), parsed.data.endTime)
+      : null;
+    if (parsed.data.endTime && !endTime) {
+      return NextResponse.json({ error: "Invalid end time." }, { status: 400 });
+    }
+    if (endTime && endTime < startTime) {
+      endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+    }
 
     const activity = await prisma.activity.create({
       data: {
@@ -60,6 +80,7 @@ export async function POST(
         title: parsed.data.title,
         description: parsed.data.notes || null,
         startTime,
+        endTime,
       },
     });
 

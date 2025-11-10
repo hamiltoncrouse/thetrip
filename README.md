@@ -1,6 +1,6 @@
 # The Trip
 
-AI-forward France itinerary planner built with Next.js 15, Prisma, and the same Render/Postgres/Gemini stack you already use for IdealHome. This repo ships with an opinionated schema, typed env validation, seed API routes, and a landing page so you can immediately start stitching UI + AI workflows together.
+AI-forward travel planner built with Next.js 15, Prisma, and the same Render/Postgres/Gemini stack you already use for IdealHome. This repo ships with an opinionated schema, typed env validation, seed API routes, and a landing page so you can immediately start stitching UI + AI workflows together.
 
 ## Stack Highlights
 - **Next.js 15 (App Router)** with TypeScript, Tailwind, and Turbopack-ready dev server.
@@ -71,6 +71,7 @@ The landing page introduces The Trip. API routes are namespaced at `/api/*`; you
 ## Dashboard UI
 - Visit `/dashboard` to use the new trip list + creation flow.
 - Sign in with Google (Firebase Auth) to load trips from `/api/trips` and create new ones. The UI automatically attaches your ID token to each request. Without Firebase client config the dashboard will prompt you to add the missing `NEXT_PUBLIC_FIREBASE_*` env vars on Render.
+- The planner UI features a left rail for trips (with delete + quick select), a full-width day view with timeline editing (start/end times, notes), and a right rail “Fonda” assistant for ad-hoc questions.
 
 ## Deploying to Render
 1. **Render Postgres**: reuse the `my-data-vibe` instance or create a new database. Copy the *External Database URL* into the Web Service env.
