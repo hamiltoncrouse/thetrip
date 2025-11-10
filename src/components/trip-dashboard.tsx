@@ -118,7 +118,6 @@ export function TripDashboard() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -129,7 +128,6 @@ export function TripDashboard() {
   const createPlacesToken = () =>
     typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11);
   const [placesSessionToken, setPlacesSessionToken] = useState<string>(createPlacesToken);
-  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const isAuthenticated = Boolean(user && idToken);
   const authHeaders = useMemo(() => {
@@ -223,7 +221,7 @@ export function TripDashboard() {
     if (window.innerWidth >= 1024) {
       setIsChatOpen(true);
     }
-  }, [setIsChatOpen]);
+  }, []);
 
   useEffect(() => {
     if (!cityQuery || cityQuery.length < 2) {
