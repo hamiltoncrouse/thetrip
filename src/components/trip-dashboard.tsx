@@ -460,8 +460,8 @@ export function TripDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:grid lg:grid-cols-[220px,minmax(0,1fr),360px]">
-        <section className="space-y-4">
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10 lg:grid lg:grid-cols-[200px,minmax(0,1fr),360px]">
+        <section className="space-y-4 lg:min-w-0">
           <div>
             <p className="text-sm uppercase tracking-[0.4em] text-slate-500">Trips</p>
             <h2 className="text-3xl font-semibold text-white">{headline}</h2>
@@ -613,7 +613,7 @@ export function TripDashboard() {
           )}
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4 lg:min-w-0">
           {selectedTrip ? (
             <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

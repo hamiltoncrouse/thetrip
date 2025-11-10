@@ -15,6 +15,27 @@ type Suggestion = {
   suggestedTime?: string;
 };
 
+const responseSchema = {
+  type: "object",
+  properties: {
+    suggestions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          description: { type: "string" },
+          suggestedTime: { type: "string" },
+        },
+        required: ["title", "description"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["suggestions"],
+  additionalProperties: false,
+} satisfies Record<string, unknown>;
+
 function buildPrompt(city: string, day?: string, interests: string[] = []) {
   const interestsLine = interests.length ? interests.join(", ") : "surprise me";
   const dayLine = day ? `The date is ${day}.` : "The traveler didn't specify a date.";
@@ -26,17 +47,10 @@ Focus on realistic plans you could add to an itinerary.`;
 
 function parseSuggestions(content?: string): Suggestion[] {
   if (!content) return [];
-  const trimmed = content.trim();
-  const jsonStart = trimmed.indexOf("{");
-  const jsonSlice = jsonStart >= 0 ? trimmed.slice(jsonStart) : trimmed;
   try {
-    const parsed = JSON.parse(jsonSlice);
-    if (Array.isArray(parsed)) {
-      return parsed as Suggestion[];
-    }
-    if (Array.isArray(parsed?.suggestions)) {
-      return parsed.suggestions as Suggestion[];
-    }
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed)) return parsed as Suggestion[];
+    if (Array.isArray(parsed?.suggestions)) return parsed.suggestions as Suggestion[];
   } catch (error) {
     console.warn("Failed to parse Gemini suggestions as JSON", error);
   }
@@ -57,7 +71,12 @@ async function fetchGeminiSuggestions(city: string, day?: string, interests: str
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.6, maxOutputTokens: 512 },
+      generationConfig: {
+        temperature: 0.6,
+        maxOutputTokens: 512,
+        responseMimeType: "application/json",
+        responseSchema,
+      },
     }),
   });
 
@@ -67,11 +86,7 @@ async function fetchGeminiSuggestions(city: string, day?: string, interests: str
   }
 
   const data = await response.json();
-  const text =
-    data?.candidates?.[0]?.content?.parts
-      ?.map((part: { text?: string }) => part.text || "")
-      .join("\n")
-      .trim() || undefined;
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   return parseSuggestions(text);
 }
 
@@ -89,7 +104,8 @@ export async function POST(req: Request) {
   const { city, day, interests = [] } = parsed.data;
 
   let items: Suggestion[] = [];
-  let source: "gemini" | "placeholder" = "placeholder";
+  let source: "gemini" | "placeholder" | "error" = "placeholder";
+  let errorMessage: string | undefined;
   try {
     const geminiSuggestions = await fetchGeminiSuggestions(city, day, interests);
     if (geminiSuggestions.length) {
@@ -98,6 +114,8 @@ export async function POST(req: Request) {
     }
   } catch (error) {
     console.error("Gemini suggestions failed", error);
+    source = "error";
+    errorMessage = error instanceof Error ? error.message : "Unknown Gemini error";
   }
 
   if (!items.length) {
@@ -115,5 +133,5 @@ export async function POST(req: Request) {
     ];
   }
 
-  return NextResponse.json({ city, day, items, source });
+  return NextResponse.json({ city, day, items, source, error: errorMessage });
 }
