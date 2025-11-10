@@ -19,7 +19,7 @@ function handleAuthError(error: unknown) {
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: { tripId: string; dayId: string } },
+  context: { params: Promise<{ tripId: string; dayId: string }> },
 ) {
   try {
     const { account } = await resolveAccount(request);
@@ -33,7 +33,7 @@ export async function PATCH(
       );
     }
 
-    const { tripId, dayId } = context.params;
+    const { tripId, dayId } = await context.params;
 
     const day = await prisma.tripDay.findFirst({
       where: {
