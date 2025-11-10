@@ -17,7 +17,10 @@ function handleAuthError(error: unknown) {
   return null;
 }
 
-export async function PATCH(request: Request, context: { params: { tripId: string; dayId: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: { tripId: string; dayId: string } },
+) {
   try {
     const { account } = await resolveAccount(request);
     const json = await request.json();
