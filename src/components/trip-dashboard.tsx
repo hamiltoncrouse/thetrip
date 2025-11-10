@@ -70,7 +70,10 @@ export function TripDashboard() {
   const [savingActivity, setSavingActivity] = useState(false);
 
   const isAuthenticated = Boolean(user && idToken);
-  const authHeaders = useMemo(() => (idToken ? { Authorization: `Bearer ${idToken}` } : {}), [idToken]);
+  const authHeaders = useMemo(() => {
+    if (!idToken) return undefined;
+    return { Authorization: `Bearer ${idToken}` } satisfies HeadersInit;
+  }, [idToken]);
 
   const headline = useMemo(() => {
     if (!isAuthenticated) {
