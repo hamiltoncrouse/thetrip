@@ -34,7 +34,17 @@ if (!serverResult.success) {
   throw new Error("Invalid server environment variables");
 }
 
-const clientResult = clientSchema.safeParse(process.env);
+const clientEnvValues = {
+  NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+  NEXT_PUBLIC_DEFAULT_HOME_CITY: process.env.NEXT_PUBLIC_DEFAULT_HOME_CITY,
+  NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+};
+
+const clientResult = clientSchema.safeParse(clientEnvValues);
 if (!clientResult.success) {
   console.error("❌ Invalid client environment variables", clientResult.error.flatten().fieldErrors);
   throw new Error("Invalid client environment variables");
