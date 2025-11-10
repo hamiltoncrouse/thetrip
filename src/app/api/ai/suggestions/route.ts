@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
 import { serverEnv } from "@/lib/env";
 
 const suggestionSchema = z.object({
@@ -7,6 +8,72 @@ const suggestionSchema = z.object({
   day: z.string().optional(),
   interests: z.array(z.string()).optional(),
 });
+
+type Suggestion = {
+  title: string;
+  description: string;
+  suggestedTime?: string;
+};
+
+function buildPrompt(city: string, day?: string, interests: string[] = []) {
+  const interestsLine = interests.length ? interests.join(", ") : "surprise me";
+  const dayLine = day ? `The date is ${day}.` : "The traveler didn't specify a date.";
+  return `You are Fonda, a travel-planning copilot. Suggest vivid, specific activities or experiences in ${city}.
+${dayLine} They are interested in ${interestsLine}.
+Return STRICT JSON matching this schema (no prose): {"suggestions":[{"title":"string","description":"string","suggestedTime":"HH:MM"}]}
+Focus on realistic plans you could add to an itinerary.`;
+}
+
+function parseSuggestions(content?: string): Suggestion[] {
+  if (!content) return [];
+  const trimmed = content.trim();
+  const jsonStart = trimmed.indexOf("{");
+  const jsonSlice = jsonStart >= 0 ? trimmed.slice(jsonStart) : trimmed;
+  try {
+    const parsed = JSON.parse(jsonSlice);
+    if (Array.isArray(parsed)) {
+      return parsed as Suggestion[];
+    }
+    if (Array.isArray(parsed?.suggestions)) {
+      return parsed.suggestions as Suggestion[];
+    }
+  } catch (error) {
+    console.warn("Failed to parse Gemini suggestions as JSON", error);
+  }
+  return [];
+}
+
+async function fetchGeminiSuggestions(city: string, day?: string, interests: string[] = []) {
+  if (!serverEnv.GEMINI_API_KEY) return [];
+  const prompt = buildPrompt(city, day, interests);
+  const url = new URL(
+    `/v1beta/models/${serverEnv.GEMINI_MODEL}:generateContent`,
+    "https://generativelanguage.googleapis.com",
+  );
+  url.searchParams.set("key", serverEnv.GEMINI_API_KEY);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.6, maxOutputTokens: 512 },
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Gemini request failed (${response.status}): ${body}`);
+  }
+
+  const data = await response.json();
+  const text =
+    data?.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text || "")
+      .join("\n")
+      .trim() || undefined;
+  return parseSuggestions(text);
+}
 
 export async function POST(req: Request) {
   const json = await req.json();
@@ -19,33 +86,34 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!serverEnv.GEMINI_API_KEY) {
-    return NextResponse.json(
-      { error: "Gemini is not configured yet." },
-      { status: 503 },
-    );
-  }
-
   const { city, day, interests = [] } = parsed.data;
 
-  // Placeholder response until Gemini proxy is wired up.
-  const items = [
-    {
-      title: `Stroll through ${city}`,
-      description: "Discover key landmarks with a self-guided walk.",
-      suggestedTime: "10:00",
-    },
-    {
-      title: "Local dining",
-      description: `Book a table inspired by your interests: ${interests.join(", ") || "food"}.`,
-      suggestedTime: "19:30",
-    },
-  ];
+  let items: Suggestion[] = [];
+  let source: "gemini" | "placeholder" = "placeholder";
+  try {
+    const geminiSuggestions = await fetchGeminiSuggestions(city, day, interests);
+    if (geminiSuggestions.length) {
+      items = geminiSuggestions;
+      source = "gemini";
+    }
+  } catch (error) {
+    console.error("Gemini suggestions failed", error);
+  }
 
-  return NextResponse.json({
-    city,
-    day,
-    items,
-    source: "placeholder",
-  });
+  if (!items.length) {
+    items = [
+      {
+        title: `Stroll through ${city}`,
+        description: "Discover key landmarks with a self-guided walk.",
+        suggestedTime: "10:00",
+      },
+      {
+        title: "Local dining",
+        description: `Book a table inspired by your interests: ${interests.join(", ") || "food"}.`,
+        suggestedTime: "19:30",
+      },
+    ];
+  }
+
+  return NextResponse.json({ city, day, items, source });
 }

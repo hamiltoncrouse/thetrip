@@ -460,7 +460,7 @@ export function TripDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 lg:grid lg:grid-cols-[280px,minmax(0,1fr),280px]">
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:grid lg:grid-cols-[220px,minmax(0,1fr),360px]">
         <section className="space-y-4">
           <div>
             <p className="text-sm uppercase tracking-[0.4em] text-slate-500">Trips</p>
@@ -819,7 +819,7 @@ export function TripDashboard() {
           )}
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+        <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 lg:flex lg:flex-col">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Fonda</p>
@@ -827,8 +827,9 @@ export function TripDashboard() {
             </div>
             {chatLoading && <span className="text-xs text-slate-300">thinking...</span>}
           </div>
-          <div className="flex flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/30 p-4 text-sm"
-            style={{ maxHeight: "420px" }}
+          <div
+            className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/30 p-4 text-sm"
+            style={{ minHeight: "420px", maxHeight: "70vh" }}
           >
             {chatMessages.map((message) => (
               <div
@@ -843,7 +844,7 @@ export function TripDashboard() {
               </div>
             ))}
           </div>
-          <form className="space-y-2" onSubmit={sendChatMessage}>
+          <form className="space-y-2 pt-2" onSubmit={sendChatMessage}>
             <textarea
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
