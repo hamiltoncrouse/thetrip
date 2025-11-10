@@ -222,8 +222,8 @@ export function TripDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-white/10 bg-slate-950/80 backdrop-blur">
+    <div className="min-h-screen text-slate-100">
+      <header className="border-b border-white/10 bg-[#070016]/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-slate-500">{clientEnv.NEXT_PUBLIC_APP_NAME}</p>
@@ -247,7 +247,7 @@ export function TripDashboard() {
               <button
                 onClick={() => signInWithGoogle().catch((err) => setTripError(err.message))}
                 disabled={!firebaseConfigured || status === "loading"}
-                className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-200"
+                className="psychedelic-button rounded-full px-5 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {firebaseConfigured ? "Sign in with Google" : "Configure Firebase"}
               </button>
@@ -284,7 +284,7 @@ export function TripDashboard() {
                   <article
                     key={trip.id}
                     className={`cursor-pointer rounded-2xl border p-5 transition hover:border-white/40 ${
-                      selectedTripId === trip.id ? "border-white/60 bg-white/10" : "border-white/10 bg-white/5"
+                      selectedTripId === trip.id ? "border-white/70 bg-white/15" : "border-white/10 bg-white/5"
                     }`}
                     onClick={() => setSelectedTripId(trip.id)}
                   >
@@ -389,7 +389,7 @@ export function TripDashboard() {
               <button
                 type="submit"
                 disabled={creating}
-                className="w-full rounded-full bg-white py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-wait disabled:bg-slate-200"
+                className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
               >
                 {creating ? "Creating..." : "Create trip"}
               </button>
