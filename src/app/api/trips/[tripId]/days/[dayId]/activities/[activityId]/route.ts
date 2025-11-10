@@ -18,12 +18,12 @@ function handleAuthError(error: unknown) {
   return null;
 }
 
-function combineDateWithTime(dateIso: string, time: string) {
+function combineDateWithTime(dateValue: string | Date, time: string) {
   const [hours, minutes] = time.split(":" ).map((value) => Number.parseInt(value, 10));
   if (Number.isNaN(hours) || Number.isNaN(minutes)) {
     return null;
   }
-  const base = new Date(dateIso);
+  const base = new Date(dateValue);
   if (Number.isNaN(base.valueOf())) {
     return null;
   }
