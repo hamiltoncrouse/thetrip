@@ -7,6 +7,9 @@ import { authenticateRequest, AuthError } from "@/lib/auth";
 const updateDaySchema = z.object({
   city: z.string().optional(),
   notes: z.string().optional(),
+  cityPlaceId: z.string().nullable().optional(),
+  cityLatitude: z.number().nullable().optional(),
+  cityLongitude: z.number().nullable().optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -51,6 +54,12 @@ export async function PATCH(
       data: {
         city: parsed.data.city ?? day.city,
         notes: parsed.data.notes ?? day.notes,
+        cityPlaceId:
+          parsed.data.cityPlaceId === undefined ? day.cityPlaceId : parsed.data.cityPlaceId,
+        cityLatitude:
+          parsed.data.cityLatitude === undefined ? day.cityLatitude : parsed.data.cityLatitude,
+        cityLongitude:
+          parsed.data.cityLongitude === undefined ? day.cityLongitude : parsed.data.cityLongitude,
       },
     });
 
@@ -60,6 +69,9 @@ export async function PATCH(
         date: updated.date,
         city: updated.city,
         notes: updated.notes,
+        cityPlaceId: updated.cityPlaceId,
+        cityLatitude: updated.cityLatitude,
+        cityLongitude: updated.cityLongitude,
       },
     });
   } catch (error) {

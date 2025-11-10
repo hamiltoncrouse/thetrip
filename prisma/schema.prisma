@@ -48,6 +48,9 @@ model TripDay {
   tripId    String
   date      DateTime
   city      String
+  cityPlaceId   String?
+  cityLatitude  Float?
+  cityLongitude Float?
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

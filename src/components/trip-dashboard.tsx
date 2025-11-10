@@ -19,6 +19,9 @@ type TripDay = {
   id: string;
   date: string;
   city: string;
+  cityPlaceId?: string | null;
+  cityLatitude?: number | null;
+  cityLongitude?: number | null;
   notes?: string | null;
   activities?: Activity[];
 };
@@ -33,7 +36,7 @@ type PlaceSuggestion = {
 type DayPlaceLookup = Record<
   string,
   {
-    placeId: string;
+    placeId?: string | null;
     description: string;
     lat: number;
     lng: number;
@@ -169,6 +172,20 @@ export function TripDashboard() {
         }
         const data: TripsResponse = await res.json();
         setTrips(data.trips || []);
+        const placeEntries: DayPlaceLookup = {};
+        data.trips?.forEach((trip) => {
+          trip.days.forEach((day) => {
+            if (day.cityLatitude !== null && day.cityLatitude !== undefined && day.cityLongitude !== null && day.cityLongitude !== undefined) {
+              placeEntries[day.id] = {
+                placeId: day.cityPlaceId || "",
+                description: day.city,
+                lat: day.cityLatitude,
+                lng: day.cityLongitude,
+              };
+            }
+          });
+        });
+        setDayPlaces(placeEntries);
         if (data.trips?.length) {
           setSelectedTripId((prev) => prev || data.trips[0].id);
           setSelectedDayId((prev) => prev || data.trips[0].days[0]?.id || null);
@@ -339,10 +356,17 @@ export function TripDashboard() {
     setSavingDay(true);
     setTripError(null);
     try {
+      const place = selectedDayId ? dayPlaces[selectedDayId] : undefined;
       const res = await fetch(`/api/trips/${selectedTrip.id}/days/${selectedDay.id}`, {
         method: "PATCH",
         headers: jsonHeaders,
-        body: JSON.stringify({ city: dayForm.city, notes: dayForm.notes }),
+        body: JSON.stringify({
+          city: dayForm.city,
+          notes: dayForm.notes,
+          cityPlaceId: place?.placeId ?? null,
+          cityLatitude: place?.lat ?? null,
+          cityLongitude: place?.lng ?? null,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -356,13 +380,34 @@ export function TripDashboard() {
                 ...trip,
                 days: trip.days.map((day) =>
                   day.id === data.day.id
-                    ? { ...day, city: data.day.city, notes: data.day.notes }
+                    ? {
+                        ...day,
+                        city: data.day.city,
+                        notes: data.day.notes,
+                        cityPlaceId: data.day.cityPlaceId,
+                        cityLatitude: data.day.cityLatitude,
+                        cityLongitude: data.day.cityLongitude,
+                      }
                     : day,
                 ),
               }
             : trip,
         ),
       );
+      setDayPlaces((prev) => {
+        const next = { ...prev };
+        if (data.day.cityLatitude !== null && data.day.cityLatitude !== undefined && data.day.cityLongitude !== null && data.day.cityLongitude !== undefined) {
+          next[data.day.id] = {
+            placeId: data.day.cityPlaceId,
+            description: data.day.city,
+            lat: data.day.cityLatitude,
+            lng: data.day.cityLongitude,
+          };
+        } else {
+          delete next[data.day.id];
+        }
+        return next;
+      });
     } catch (err) {
       setTripError(err instanceof Error ? err.message : "Failed to update day");
     } finally {
