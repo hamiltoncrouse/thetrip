@@ -362,11 +362,13 @@ export function TripDashboard() {
     setTripError(null);
     try {
       const place = selectedDayId ? dayPlaces[selectedDayId] : undefined;
+      const submittedCity = (cityQuery || dayForm.city).trim();
+      setDayForm((prev) => ({ ...prev, city: submittedCity }));
       const res = await fetch(`/api/trips/${selectedTrip.id}/days/${selectedDay.id}`, {
         method: "PATCH",
         headers: jsonHeaders,
         body: JSON.stringify({
-          city: dayForm.city,
+          city: submittedCity,
           notes: dayForm.notes,
           cityPlaceId: place ? place.placeId ?? null : undefined,
           cityLatitude: place ? place.lat : undefined,
