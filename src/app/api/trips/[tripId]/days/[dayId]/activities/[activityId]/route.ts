@@ -18,17 +18,18 @@ function handleAuthError(error: unknown) {
   return null;
 }
 
-function combineDateWithTime(dateValue: Date, time: string) {
+function combineDateWithTime(dateIso: string, time: string) {
   const [hours, minutes] = time.split(":" ).map((value) => Number.parseInt(value, 10));
   if (Number.isNaN(hours) || Number.isNaN(minutes)) {
     return null;
   }
-  const result = new Date(dateValue);
-  if (Number.isNaN(result.valueOf())) {
+  const base = new Date(dateIso);
+  if (Number.isNaN(base.valueOf())) {
     return null;
   }
-  result.setHours(hours, minutes, 0, 0);
-  return result;
+  const datePart = base.toISOString().split("T")[0];
+  const candidate = new Date(`${datePart}T${time}:00`);
+  return Number.isNaN(candidate.valueOf()) ? null : candidate;
 }
 
 async function assertOwnership(
@@ -78,12 +79,12 @@ export async function PATCH(
     if (parsed.data.notes !== undefined) updates.description = parsed.data.notes;
 
     if (parsed.data.startTime) {
-      const value = combineDateWithTime(new Date(existing.tripDay.date), parsed.data.startTime);
+      const value = combineDateWithTime(existing.tripDay.date, parsed.data.startTime);
       if (!value) return NextResponse.json({ error: "Invalid start time" }, { status: 400 });
       updates.startTime = value;
     }
     if (parsed.data.endTime) {
-      const value = combineDateWithTime(new Date(existing.tripDay.date), parsed.data.endTime);
+      const value = combineDateWithTime(existing.tripDay.date, parsed.data.endTime);
       if (!value) return NextResponse.json({ error: "Invalid end time" }, { status: 400 });
       updates.endTime = value;
     }

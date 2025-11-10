@@ -88,4 +88,4 @@ The landing page introduces The Trip. API routes are namespaced at `/api/*`; you
 - Flesh out the dashboard with calendar + drag-and-drop timeline once the data plumbing is stable.
 - Add automated tests and CI (Vitest + Playwright) to guard the growing surface area.
 
-Welcome to The Trip—psychedelic France planning awaits.
+Welcome to The Trip—psychedelic travel planning awaits.
