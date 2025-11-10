@@ -32,23 +32,26 @@ export default function HomePage() {
         <header className="space-y-6 text-center">
           <p className="text-sm uppercase tracking-[0.4em] text-slate-300">{clientEnv.NEXT_PUBLIC_APP_NAME}</p>
           <h1 className="text-4xl font-semibold tracking-tight text-white drop-shadow-[0_10px_35px_rgba(255,71,218,0.35)] sm:text-6xl">
-            “The Trip” inspired planner for the most vivid France adventure of your life
+            <span className="bg-gradient-to-r from-[#ff47da] via-[#66f6ff] to-[#ffb347] bg-clip-text text-transparent">
+              The Trip
+            </span>{" "}
+            planner for a cinematic France adventure
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-slate-200">
-            Neon gradients, AI riffs, and live data stitch together an itinerary that feels like Peter Fonda cruising
-            down the Riviera at midnight.
+            Neon gradients, AI riffs, and live data merge into a planner that feels like a midnight road movie: wild,
+            expressive, and orchestrated just for you.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link href="/dashboard" className="psychedelic-button inline-flex items-center justify-center rounded-full px-8 py-3">
               Launch The Trip Planner
             </Link>
             <a
-              href="https://en.wikipedia.org/wiki/The_Trip_(1967_film)"
+              href="https://en.wikipedia.org/wiki/Psychedelia"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-full border border-white/30 px-8 py-3 text-slate-100 transition hover:border-white"
             >
-              Learn the cult inspiration
+              Explore the aesthetic
             </a>
           </div>
         </header>
