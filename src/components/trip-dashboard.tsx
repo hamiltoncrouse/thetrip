@@ -125,7 +125,9 @@ export function TripDashboard() {
   const [citySuggestionsError, setCitySuggestionsError] = useState<string | null>(null);
   const [cityDetailsLoading, setCityDetailsLoading] = useState(false);
   const [dayPlaces, setDayPlaces] = useState<DayPlaceLookup>({});
+  const [mapError, setMapError] = useState(false);
   const suggestionsAbortRef = useRef<AbortController | null>(null);
+  const suppressSuggestionsRef = useRef(false);
   const createPlacesToken = () =>
     typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11);
   const [placesSessionToken, setPlacesSessionToken] = useState<string>(createPlacesToken);
@@ -193,6 +195,10 @@ export function TripDashboard() {
   const selectedDayPlace = selectedDayId ? dayPlaces[selectedDayId] : null;
 
   useEffect(() => {
+    setMapError(false);
+  }, [selectedDayPlace?.placeId]);
+
+  useEffect(() => {
     if (!selectedTrip) {
       setSelectedDayId(null);
       setDayForm(emptyDayForm);
@@ -225,6 +231,12 @@ export function TripDashboard() {
   }, []);
 
   useEffect(() => {
+    if (suppressSuggestionsRef.current) {
+      setCitySuggestions([]);
+      setCitySuggestionsError(null);
+      return;
+    }
+
     if (!cityQuery || cityQuery.length < 2) {
       setCitySuggestions([]);
       setCitySuggestionsError(null);
@@ -466,6 +478,7 @@ export function TripDashboard() {
   }
 
   function handleCityInputChange(value: string) {
+    suppressSuggestionsRef.current = false;
     setCityQuery(value);
     setCitySuggestionsError(null);
     setDayForm((prev) => ({ ...prev, city: value }));
@@ -480,6 +493,7 @@ export function TripDashboard() {
 
   async function handleCitySuggestionSelect(suggestion: PlaceSuggestion) {
     suggestionsAbortRef.current?.abort();
+    suppressSuggestionsRef.current = true;
     setCitySuggestionsLoading(false);
     setCitySuggestions([]);
     setCitySuggestionsError(null);
@@ -514,6 +528,7 @@ export function TripDashboard() {
       setCitySuggestionsError(err instanceof Error ? err.message : "Failed to load place");
     } finally {
       setCityDetailsLoading(false);
+      suppressSuggestionsRef.current = false;
     }
   }
 
@@ -1048,14 +1063,22 @@ export function TripDashboard() {
                       <div className="space-y-2 rounded-2xl border border-white/10 bg-slate-900/30 p-3">
                         <p className="text-xs uppercase tracking-[0.4em] text-slate-500">City map</p>
                         <div className="overflow-hidden rounded-xl border border-white/10">
-                          <Image
-                            src={`/api/maps/static?lat=${selectedDayPlace.lat}&lng=${selectedDayPlace.lng}`}
-                            alt={`Map of ${selectedDayPlace.description}`}
-                            width={1200}
-                            height={640}
-                            className="h-48 w-full object-cover"
-                            unoptimized
-                          />
+                          {!mapError ? (
+                            <Image
+                              src={`/api/maps/static?lat=${selectedDayPlace.lat}&lng=${selectedDayPlace.lng}`}
+                              alt={`Map of ${selectedDayPlace.description}`}
+                              width={1200}
+                              height={640}
+                              className="h-48 w-full object-cover"
+                              unoptimized
+                              onError={() => setMapError(true)}
+                            />
+                          ) : (
+                            <div className="flex h-48 w-full flex-col items-center justify-center bg-slate-900/50 text-center text-sm text-slate-300">
+                              <p>Map preview unavailable.</p>
+                              <p className="text-xs text-slate-500">Open in Google Maps instead.</p>
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col gap-1 text-sm text-slate-200 md:flex-row md:items-center md:justify-between">
                           <div>
