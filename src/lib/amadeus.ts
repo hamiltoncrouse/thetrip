@@ -175,6 +175,11 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
       continue;
     }
 
+    if (response.status === 400) {
+      collected.push(...(await fetchOffersPerId(batch, params, apiBase, token)));
+      continue;
+    }
+
     if (!response.ok) {
       const text = await response.text();
       throw new Error(`Amadeus hotels failed (${response.status}): ${text}`);
@@ -208,4 +213,45 @@ function chunkHotelIds(ids: string[], size: number) {
     output.push(ids.slice(index, index + size));
   }
   return output;
+}
+
+async function fetchOffersPerId(
+  ids: string[],
+  params: HotelSearchParams,
+  apiBase: string,
+  token: string,
+): Promise<RawHotelOffer[]> {
+  const found: RawHotelOffer[] = [];
+  for (const id of ids) {
+    const url = new URL("/v2/shopping/hotel-offers", apiBase);
+    url.searchParams.set("hotelIds", id);
+    url.searchParams.set("adults", String(params.adults ?? 2));
+    url.searchParams.set("roomQuantity", "1");
+    url.searchParams.set("bestRateOnly", "true");
+    url.searchParams.set("view", "FULL");
+    url.searchParams.set("sort", "PRICE");
+    url.searchParams.set("checkInDate", params.checkIn);
+    if (params.checkOut) url.searchParams.set("checkOutDate", params.checkOut);
+    if (params.currency) url.searchParams.set("currency", params.currency);
+    if (params.limit) url.searchParams.set("page[limit]", String(params.limit));
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.status === 404) {
+      continue;
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Amadeus hotels failed (${response.status}): ${text}`);
+    }
+
+    const payload = (await response.json()) as AmadeusSearchResponse;
+    if (Array.isArray(payload?.data)) {
+      found.push(...payload.data);
+    }
+  }
+  return found;
 }

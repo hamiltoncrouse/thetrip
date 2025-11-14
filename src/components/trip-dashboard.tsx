@@ -794,8 +794,8 @@ export function TripDashboard() {
             <Image
               src="/fonda.png"
               alt="Fonda avatar"
-              width={64}
-              height={64}
+              width={82}
+              height={82}
               className="rounded-full"
               priority
             />
