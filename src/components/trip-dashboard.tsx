@@ -132,6 +132,7 @@ export function TripDashboard() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -719,14 +720,21 @@ export function TripDashboard() {
   }
 
   const chatPanelContent = (
-    <>
-      <div className="flex items-center justify-between">
+    <div className="flex h-full w-full flex-col">
+      <div className="flex items-center justify-between gap-2 pb-4">
         <div>
           <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Fonda</p>
           <h2 className="text-xl font-semibold text-slate-900">Travel consultant</h2>
         </div>
         <div className="flex items-center gap-2">
           {chatLoading && <span className="text-xs text-slate-600">thinking...</span>}
+          <button
+            type="button"
+            onClick={() => setChatExpanded((prev) => !prev)}
+            className="hidden rounded-full border border-[#f1c0ff] px-3 py-1 text-xs text-slate-900 transition hover:border-[#d77dff] lg:inline-flex"
+          >
+            {chatExpanded ? "Compact" : "Expand"}
+          </button>
           <button
             type="button"
             onClick={() => setIsChatOpen(false)}
@@ -737,23 +745,28 @@ export function TripDashboard() {
         </div>
       </div>
       <div
-        className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-[#f5d9ff] bg-white/70 p-4 text-sm"
+        className="flex-1 overflow-y-auto rounded-2xl border border-[#f5d9ff] bg-white/70 p-4 text-sm"
         style={{ minHeight: "320px" }}
+        role="log"
+        aria-live="polite"
+        aria-label="Fonda chat history"
       >
-        {chatMessages.map((message) => (
-          <div
-            key={message.id}
-            className={`max-w-full rounded-2xl px-4 py-2 ${
-              message.role === "assistant"
-                ? "bg-white/90 text-slate-900 self-start"
-                : "bg-[#ffe6ff] text-slate-900 self-end"
-            }`}
-          >
-            {message.text}
-          </div>
-        ))}
+        <div className="flex flex-col gap-3">
+          {chatMessages.map((message) => (
+            <div
+              key={message.id}
+              className={`max-w-full rounded-2xl px-4 py-2 ${
+                message.role === "assistant"
+                  ? "bg-white/90 text-slate-900 self-start"
+                  : "bg-[#ffe6ff] text-slate-900 self-end"
+              }`}
+            >
+              {message.text}
+            </div>
+          ))}
+        </div>
       </div>
-      <form className="space-y-2 pt-2" onSubmit={sendChatMessage}>
+      <form className="space-y-2 pt-4" onSubmit={sendChatMessage}>
         <textarea
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
@@ -774,8 +787,12 @@ export function TripDashboard() {
           Send to Fonda
         </button>
       </form>
-    </>
+    </div>
   );
+
+  const chatColumnClass = chatExpanded
+    ? "lg:grid-cols-[minmax(0,1fr),460px]"
+    : "lg:grid-cols-[minmax(0,1fr),360px]";
 
   return (
     <div className="dayglow-page min-h-screen text-slate-900">
@@ -857,19 +874,21 @@ export function TripDashboard() {
                   </button>
                 )}
                 <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  title="Edit days, cities, and activities"
+                  onClick={() => setView("timeline")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    view === "timeline"
+                      ? "bg-white text-slate-900"
+                      : "border border-[#ebaef5] text-slate-900 hover:border-[#d77dff]"
+                  }`}
+                >
+                  Edit trip
+                </button>
                   <button
                     type="button"
-                    onClick={() => setView("timeline")}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                      view === "timeline"
-                        ? "bg-white text-slate-900"
-                        : "border border-[#ebaef5] text-slate-900 hover:border-[#d77dff]"
-                    }`}
-                  >
-                    Timeline
-                  </button>
-                  <button
-                    type="button"
+                    title="Visualize the trip on a calendar"
                     onClick={() => setView("calendar")}
                     className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                       view === "calendar"
@@ -1191,13 +1210,14 @@ export function TripDashboard() {
                           )}
                           <button
                             type="button"
+                            title="Jump to the trip editor to update this day"
                             onClick={() => {
                               setSelectedDayId(calendarDay.id);
                               setView("timeline");
                             }}
                             className="rounded-full border border-[#ebaef5] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
                           >
-                            Edit in timeline
+                            Open trip editor
                           </button>
                         </>
                         ) : (
@@ -1216,7 +1236,7 @@ export function TripDashboard() {
             )}
           </section>
         ) : (
-          <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr),360px]">
+          <div className={`flex flex-col gap-6 lg:grid ${chatColumnClass}`}>
             <section className="space-y-4 rounded-2xl border border-[#f5d9ff] bg-white/80 p-6">
             {selectedTrip ? (
               <div className="space-y-5">
@@ -1318,7 +1338,7 @@ export function TripDashboard() {
 
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Timeline</p>
+                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Trip editor</p>
                         {orderedActivities.length ? (
                           <ol className="space-y-2">
                             {orderedActivities.map((activity) => (
@@ -1475,7 +1495,7 @@ export function TripDashboard() {
                               ? "Saving..."
                               : editingActivityId
                               ? "Update activity"
-                              : "Add to timeline"}
+                              : "Add to day plan"}
                           </button>
                           {editingActivityId && (
                             <button
@@ -1546,13 +1566,17 @@ export function TripDashboard() {
             )}
           </section>
 
-          <div className="hidden lg:flex">
+          <div className="hidden lg:block">
             {isChatOpen ? (
-              <div className="flex h-full flex-col space-y-4 rounded-2xl border border-[#f5d9ff] bg-white/80 p-6">
+              <aside
+                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full flex-col rounded-2xl border border-[#f5d9ff] bg-white/80 p-6 ${
+                  chatExpanded ? "shadow-2xl" : "shadow-lg"
+                }`}
+              >
                 {chatPanelContent}
-              </div>
+              </aside>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-[#f1c0ff] bg-white/80 p-6 text-center text-slate-600">
+              <aside className="sticky top-8 flex h-[calc(100vh-6rem)] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-[#f1c0ff] bg-white/80 p-6 text-center text-slate-600">
                 <p className="text-sm">Need ideas or timing help?</p>
                 <button
                   type="button"
@@ -1561,7 +1585,7 @@ export function TripDashboard() {
                 >
                   Chat with Fonda
                 </button>
-              </div>
+              </aside>
             )}
           </div>
         </div>
@@ -1579,8 +1603,10 @@ export function TripDashboard() {
 
         {isChatOpen && (
           <div className="fixed inset-0 z-40 bg-white/80 px-4 py-6 lg:hidden">
-            <div className="mx-auto flex h-full max-w-md flex-col space-y-4 rounded-2xl border border-[#f5d9ff] bg-white p-5">
-              {chatPanelContent}
+            <div className="mx-auto flex h-full max-w-md flex-col">
+              <div className="flex h-full flex-col rounded-2xl border border-[#f5d9ff] bg-white p-5 shadow-2xl">
+                {chatPanelContent}
+              </div>
             </div>
           </div>
         )}
