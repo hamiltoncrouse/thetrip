@@ -86,11 +86,11 @@ type GeoHotelLookupParams = {
 
 async function fetchHotelIdsByGeo({ apiBase, token, latitude, longitude, radiusKm }: GeoHotelLookupParams) {
   const geoUrl = new URL("/v1/reference-data/locations/hotels/by-geocode", apiBase);
-  geoUrl.searchParams.set("latitude", latitude.toString());
-  geoUrl.searchParams.set("longitude", longitude.toString());
+  geoUrl.searchParams.set("latitude", latitude.toFixed(6));
+  geoUrl.searchParams.set("longitude", longitude.toFixed(6));
   geoUrl.searchParams.set("radius", String(radiusKm ?? 15));
   geoUrl.searchParams.set("radiusUnit", "KM");
-  geoUrl.searchParams.set("page[limit]", "20");
+  geoUrl.searchParams.set("hotelSource", "ALL");
 
   const response = await fetch(geoUrl, {
     headers: { Authorization: `Bearer ${token}` },
@@ -110,7 +110,10 @@ async function fetchHotelIdsByGeo({ apiBase, token, latitude, longitude, radiusK
   };
 
   const payload = (await response.json()) as GeoResponse;
-  return (payload.data || []).map((entry) => entry.hotelId).filter(Boolean) as string[];
+  return (payload.data || [])
+    .map((entry) => entry.hotelId)
+    .filter((id): id is string => Boolean(id))
+    .slice(0, 20);
 }
 
 export async function searchHotels(params: HotelSearchParams): Promise<HotelOffer[]> {
