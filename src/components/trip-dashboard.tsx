@@ -722,9 +722,12 @@ export function TripDashboard() {
   const chatPanelContent = (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 pb-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Fonda</p>
-          <h2 className="text-xl font-semibold text-slate-900">Travel consultant</h2>
+        <div className="flex items-center gap-3">
+          <Image src="/fonda.png" alt="Fonda avatar" width={48} height={48} className="rounded-full border border-[#f5d9ff]" />
+          <div>
+            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Fonda</p>
+            <h2 className="text-xl font-semibold text-slate-900">Travel consultant</h2>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {chatLoading && <span className="text-xs text-slate-600">thinking...</span>}
