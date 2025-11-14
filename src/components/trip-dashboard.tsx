@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { format } from "date-fns";
+import { addDays, endOfWeek, format, startOfWeek } from "date-fns";
 
 import { useAuth } from "@/components/auth-provider";
 import { clientEnv } from "@/lib/env";
@@ -144,6 +144,9 @@ export function TripDashboard() {
   const createPlacesToken = () =>
     typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11);
   const [placesSessionToken, setPlacesSessionToken] = useState<string>(createPlacesToken);
+  const [view, setView] = useState<"timeline" | "calendar">("timeline");
+  const [calendarDayId, setCalendarDayId] = useState<string | null>(null);
+  const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
 
   const isAuthenticated = Boolean(user && idToken);
   const authHeaders = useMemo(() => {
@@ -215,7 +218,6 @@ export function TripDashboard() {
     fetchTrips();
   }, [idToken, authHeaders]);
 
-  const [view, setView] = useState<"timeline" | "calendar">("timeline");
   const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
   const selectedDay = selectedTrip?.days.find((day) => day.id === selectedDayId) || null;
   const orderedActivities = (selectedDay?.activities || [])
@@ -225,6 +227,42 @@ export function TripDashboard() {
       const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
       return aTime - bTime;
     });
+  const calendarDay = selectedTrip?.days.find((day) => day.id === calendarDayId) || null;
+  const calendarEvent = calendarDay?.activities?.find((activity) => activity.id === calendarEventId) || null;
+
+  const dayByDateKey = useMemo(() => {
+    const map: Record<string, TripDay> = {};
+    selectedTrip?.days.forEach((day) => {
+      const key = format(new Date(day.date), "yyyy-MM-dd");
+      map[key] = day;
+    });
+    return map;
+  }, [selectedTrip]);
+
+  const calendarWeeks = useMemo(() => {
+    if (!selectedTrip || !selectedTrip.days.length) return [];
+    const sortedDays = [...selectedTrip.days].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+    const startDate = selectedTrip.startDate ? new Date(selectedTrip.startDate) : new Date(sortedDays[0].date);
+    const endDate = selectedTrip.endDate
+      ? new Date(selectedTrip.endDate)
+      : new Date(sortedDays[sortedDays.length - 1].date);
+    const start = startOfWeek(startDate, { weekStartsOn: 0 });
+    const end = endOfWeek(endDate, { weekStartsOn: 0 });
+
+    const days: Date[] = [];
+    let cursor = start;
+    while (cursor <= end) {
+      days.push(new Date(cursor));
+      cursor = addDays(cursor, 1);
+    }
+    const weeks: Date[][] = [];
+    for (let index = 0; index < days.length; index += 7) {
+      weeks.push(days.slice(index, index + 7));
+    }
+    return weeks;
+  }, [selectedTrip]);
   const selectedDayPlace = selectedDayId ? dayPlaces[selectedDayId] : null;
 
   useEffect(() => {
@@ -236,11 +274,21 @@ export function TripDashboard() {
       setSelectedDayId(null);
       setDayForm(emptyDayForm);
       setCityQuery("");
+      setCalendarDayId(null);
+      setCalendarEventId(null);
       return;
     }
     const exists = selectedTrip.days.some((day) => day.id === selectedDayId);
     if (!exists) {
       setSelectedDayId(selectedTrip.days[0]?.id ?? null);
+    }
+    if (selectedTrip.days.length) {
+      setCalendarDayId((prev) => {
+        if (prev && selectedTrip.days.some((day) => day.id === prev)) return prev;
+        return selectedTrip.days[0].id;
+      });
+    } else {
+      setCalendarDayId(null);
     }
   }, [selectedTrip, selectedDayId]);
 
@@ -262,6 +310,34 @@ export function TripDashboard() {
       setIsChatOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (view === "calendar" && selectedTrip?.days.length) {
+      setCalendarDayId((prev) => prev ?? selectedTrip.days[0].id);
+    }
+  }, [view, selectedTrip]);
+
+  useEffect(() => {
+    if (view === "timeline" && selectedDayId) {
+      setCalendarDayId(selectedDayId);
+    }
+  }, [selectedDayId, view]);
+
+  useEffect(() => {
+    if (!calendarDayId) {
+      setCalendarEventId(null);
+      return;
+    }
+    const day = selectedTrip?.days.find((entry) => entry.id === calendarDayId);
+    if (!day) {
+      setCalendarEventId(null);
+      return;
+    }
+    setCalendarEventId((prev) => {
+      if (prev && day.activities?.some((activity) => activity.id === prev)) return prev;
+      return day.activities?.[0]?.id ?? null;
+    });
+  }, [calendarDayId, selectedTrip]);
 
   useEffect(() => {
     if (suppressSuggestionsRef.current) {
@@ -930,7 +1006,7 @@ export function TripDashboard() {
         {view === "calendar" ? (
           <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
             {selectedTrip ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
                   <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Trip calendar</p>
                   <h2 className="text-2xl font-semibold text-white">{selectedTrip.title}</h2>
@@ -944,45 +1020,194 @@ export function TripDashboard() {
                       : `${selectedTrip.days.length} day${selectedTrip.days.length === 1 ? "" : "s"}`}
                   </p>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {selectedTrip.days.map((day) => (
-                    <button
-                      key={day.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDayId(day.id);
-                        setView("timeline");
-                      }}
-                      className={`rounded-2xl border px-4 py-3 text-left transition hover:border-white ${
-                        selectedDayId === day.id ? "border-white bg-white/10" : "border-white/10 bg-white/5"
-                      }`}
-                    >
-                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
-                        {format(new Date(day.date), "EEE, MMM d")}
-                      </p>
-                      <p className="text-sm font-semibold text-white">{day.city}</p>
-                      {day.notes && <p className="mt-1 line-clamp-2 text-xs text-slate-400">{day.notes}</p>}
-                      <ul className="mt-2 space-y-1 text-xs text-slate-300">
-                        {(day.activities || []).slice(0, 2).map((activity) => (
-                          <li key={activity.id} className="flex gap-1">
-                            <span className="text-slate-500">
-                              {activity.startTime ? format(new Date(activity.startTime), "HH:mm") : "--:--"}
-                            </span>
-                            <span className="text-white">{activity.title}</span>
-                          </li>
-                        ))}
-                        {(day.activities?.length || 0) > 2 && (
-                          <li className="text-slate-400">+ {(day.activities?.length || 0) - 2} more</li>
-                        )}
-                      </ul>
-                    </button>
-                  ))}
-                  {!selectedTrip.days.length && (
-                    <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-slate-400">
-                      No days yet. Add a day from the timeline view.
-                    </div>
-                  )}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-7 text-xs uppercase tracking-[0.4em] text-slate-500">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label) => (
+                      <div key={label} className="text-center">
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    {calendarWeeks.map((week, weekIndex) => (
+                      <div key={`week-${weekIndex}`} className="grid grid-cols-7 gap-2">
+                        {week.map((dateValue) => {
+                          const dateKey = format(dateValue, "yyyy-MM-dd");
+                          const tripDay = dayByDateKey[dateKey];
+                          const isSelected = tripDay && tripDay.id === calendarDayId;
+                          return (
+                            <button
+                              key={dateKey}
+                              type="button"
+                              disabled={!tripDay}
+                              onClick={() => {
+                                if (!tripDay) return;
+                                setCalendarDayId(tripDay.id);
+                                setCalendarEventId(tripDay.activities?.[0]?.id ?? null);
+                              }}
+                              className={`h-28 rounded-2xl border px-2 py-2 text-left text-xs transition ${
+                                tripDay
+                                  ? isSelected
+                                    ? "border-white bg-white/10"
+                                    : "border-white/10 bg-white/5 hover:border-white"
+                                  : "border-white/5 bg-transparent text-slate-500"
+                              } ${tripDay ? "cursor-pointer" : "cursor-default"}`}
+                            >
+                              <div className="flex items-center justify-between text-slate-400">
+                                <span className="text-sm font-semibold text-white">
+                                  {dateValue.getDate()}
+                                </span>
+                                {tripDay && <span className="text-[10px] uppercase">{tripDay.city}</span>}
+                              </div>
+                              {tripDay ? (
+                                <ul className="mt-2 space-y-1 text-[11px] text-slate-200">
+                                  {(tripDay.activities || []).slice(0, 2).map((activity) => (
+                                    <li
+                                      key={activity.id}
+                                      className="flex gap-1"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setCalendarDayId(tripDay.id);
+                                        setCalendarEventId(activity.id);
+                                      }}
+                                    >
+                                      <span className="text-slate-500">
+                                        {activity.startTime
+                                          ? format(new Date(activity.startTime), "HH:mm")
+                                          : "--:--"}
+                                      </span>
+                                      <span className="text-white">{activity.title}</span>
+                                    </li>
+                                  ))}
+                                  {(tripDay.activities?.length || 0) > 2 && (
+                                    <li className="text-slate-400">
+                                      + {(tripDay.activities?.length || 0) - 2} more
+                                    </li>
+                                  )}
+                                </ul>
+                              ) : (
+                                <p className="mt-6 text-center text-slate-600">—</p>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+                {calendarDay ? (
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),320px]">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Selected day</p>
+                        <h3 className="text-xl font-semibold text-white">
+                          {format(new Date(calendarDay.date), "EEEE, MMMM d")}
+                        </h3>
+                        <p className="text-sm text-slate-400">{calendarDay.city}</p>
+                        {calendarDay.notes && (
+                          <p className="mt-2 text-sm text-slate-300">{calendarDay.notes}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {(calendarDay.activities || []).length ? (
+                          calendarDay.activities?.map((activity) => (
+                            <button
+                              key={activity.id}
+                              type="button"
+                              onClick={() => setCalendarEventId(activity.id)}
+                              className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                                activity.id === calendarEventId
+                                  ? "border-white bg-white/10"
+                                  : "border-white/10 bg-slate-900/30 hover:border-white"
+                              }`}
+                            >
+                              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                                {formatTimeRange(activity)}
+                              </p>
+                              <p className="text-sm font-semibold text-white">{activity.title}</p>
+                              {activity.location && (
+                                <p className="text-xs text-slate-300">{activity.location}</p>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-400">No activities scheduled.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/30 p-4">
+                      {calendarEvent ? (
+                        <>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Event detail</p>
+                            <h4 className="text-lg font-semibold text-white">{calendarEvent.title}</h4>
+                            <p className="text-sm text-slate-300">{formatTimeRange(calendarEvent)}</p>
+                          </div>
+                          {calendarEvent.description && (
+                            <p className="text-sm text-slate-200">{calendarEvent.description}</p>
+                          )}
+                          {calendarEvent.location && (
+                            <p className="text-sm text-slate-200">
+                              Destination: {calendarEvent.location}
+                            </p>
+                          )}
+                          {calendarEvent.startLocation && (
+                            <p className="text-sm text-slate-400">
+                              Starts at {calendarEvent.startLocation}
+                            </p>
+                          )}
+                          {calendarEvent.travelSummary && (
+                            <p className="text-sm text-emerald-300">{calendarEvent.travelSummary}</p>
+                          )}
+                          <div className="overflow-hidden rounded-xl border border-white/10">
+                            {calendarEvent.location ? (
+                              <iframe
+                                title={`Map for ${calendarEvent.title}`}
+                                src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                                  calendarEvent.location,
+                                )}&z=13&ie=UTF8&iwloc=&output=embed`}
+                                className="h-48 w-full"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="flex h-48 items-center justify-center bg-slate-900/60 text-xs text-slate-500">
+                                No address set.
+                              </div>
+                            )}
+                          </div>
+                          {(calendarEvent.location || calendarEvent.startLocation) && (
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+                                calendarEvent.startLocation || calendarDay.city || "",
+                              )}&destination=${encodeURIComponent(calendarEvent.location || "")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-sky-300 underline hover:text-sky-200"
+                            >
+                              Open in Google Maps
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedDayId(calendarDay.id);
+                              setView("timeline");
+                            }}
+                            className="rounded-full border border-white/30 px-4 py-2 text-sm text-white transition hover:border-white"
+                          >
+                            Edit in timeline
+                          </button>
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-400">Select an activity to see details.</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">Select a day to see details.</p>
+                )}
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-400">
