@@ -54,6 +54,8 @@ type Trip = {
   title: string;
   description?: string | null;
   homeCity?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   days: TripDay[];
 };
 
