@@ -722,22 +722,22 @@ export function TripDashboard() {
     <>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Fonda</p>
-          <h2 className="text-xl font-semibold text-white">Travel consultant</h2>
+          <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Fonda</p>
+          <h2 className="text-xl font-semibold text-slate-900">Travel consultant</h2>
         </div>
         <div className="flex items-center gap-2">
-          {chatLoading && <span className="text-xs text-slate-300">thinking...</span>}
+          {chatLoading && <span className="text-xs text-slate-600">thinking...</span>}
           <button
             type="button"
             onClick={() => setIsChatOpen(false)}
-            className="rounded-full border border-white/20 px-3 py-1 text-xs text-white transition hover:border-white lg:hidden"
+            className="rounded-full border border-[#f1c0ff] px-3 py-1 text-xs text-slate-900 transition hover:border-[#d77dff] lg:hidden"
           >
             Close
           </button>
         </div>
       </div>
       <div
-        className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/30 p-4 text-sm"
+        className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-[#f5d9ff] bg-white/70 p-4 text-sm"
         style={{ minHeight: "320px" }}
       >
         {chatMessages.map((message) => (
@@ -745,8 +745,8 @@ export function TripDashboard() {
             key={message.id}
             className={`max-w-full rounded-2xl px-4 py-2 ${
               message.role === "assistant"
-                ? "bg-white/10 text-slate-100 self-start"
-                : "bg-white text-slate-900 self-end"
+                ? "bg-white/90 text-slate-900 self-start"
+                : "bg-[#ffe6ff] text-slate-900 self-end"
             }`}
           >
             {message.text}
@@ -758,7 +758,7 @@ export function TripDashboard() {
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           disabled={!isAuthenticated}
-          className="w-full rounded-2xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40 disabled:opacity-50"
+          className="w-full rounded-2xl border border-[#f5d9ff] bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff] disabled:opacity-50"
           rows={3}
           placeholder={
             isAuthenticated
@@ -778,23 +778,23 @@ export function TripDashboard() {
   );
 
   return (
-    <div className="min-h-screen text-slate-100">
-      <header className="border-b border-white/10 bg-[#070016]/80 backdrop-blur">
+    <div className="dayglow-page min-h-screen text-slate-900">
+      <header className="border-b border-[#f5d9ff] bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-slate-500">{clientEnv.NEXT_PUBLIC_APP_NAME}</p>
-            <h1 className="text-2xl font-semibold text-white">The Trip Dashboard</h1>
+            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">{clientEnv.NEXT_PUBLIC_APP_NAME}</p>
+            <h1 className="text-2xl font-semibold text-slate-900">The Trip Dashboard</h1>
           </div>
           <div className="flex items-center gap-3">
             {isAuthenticated && user ? (
               <>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-white">{user.displayName || "Signed in"}</p>
-                  <p className="text-xs text-slate-400">{user.email}</p>
+                  <p className="text-sm font-medium text-slate-900">{user.displayName || "Signed in"}</p>
+                  <p className="text-xs text-slate-500">{user.email}</p>
                 </div>
                 <button
                   onClick={() => signOut()}
-                  className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/40"
+                  className="rounded-full border border-[#f1c0ff] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
                 >
                   Sign out
                 </button>
@@ -813,13 +813,13 @@ export function TripDashboard() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl space-y-6 px-6 py-10">
-        <section className="space-y-5 rounded-2xl border border-white/10 bg-white/5 p-6">
+        <section className="space-y-5 rounded-2xl border border-[#f5d9ff] bg-white/80 p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">{headline}</p>
+              <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">{headline}</p>
               <div className="flex flex-wrap items-center gap-3">
                 <select
-                  className="min-w-[220px] rounded-2xl border border-white/20 bg-slate-900/40 px-4 py-2 text-sm text-white outline-none focus:border-white"
+                  className="min-w-[220px] rounded-2xl border border-[#f1c0ff] bg-white/80 px-4 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                   value={selectedTripId ?? ""}
                   onChange={(e) => {
                     const value = e.target.value || null;
@@ -839,7 +839,7 @@ export function TripDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowTripForm((prev) => !prev)}
-                  className="rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition hover:border-white"
+                  className="rounded-full border border-[#ebaef5] px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-[#d77dff]"
                 >
                   {showTripForm ? "Close form" : "New trip"}
                 </button>
@@ -851,7 +851,7 @@ export function TripDashboard() {
                         deleteTrip(selectedTrip.id);
                       }
                     }}
-                    className="rounded-full border border-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em] text-rose-200 transition hover:border-rose-200"
+                    className="rounded-full border border-[#f1c0ff] px-4 py-2 text-xs uppercase tracking-[0.3em] text-rose-500 transition hover:border-rose-200"
                   >
                     Delete trip
                   </button>
@@ -863,7 +863,7 @@ export function TripDashboard() {
                     className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                       view === "timeline"
                         ? "bg-white text-slate-900"
-                        : "border border-white/30 text-white hover:border-white/60"
+                        : "border border-[#ebaef5] text-slate-900 hover:border-[#d77dff]"
                     }`}
                   >
                     Timeline
@@ -874,7 +874,7 @@ export function TripDashboard() {
                     className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                       view === "calendar"
                         ? "bg-white text-slate-900"
-                        : "border border-white/30 text-white hover:border-white/60"
+                        : "border border-[#ebaef5] text-slate-900 hover:border-[#d77dff]"
                     }`}
                   >
                     Calendar
@@ -882,15 +882,15 @@ export function TripDashboard() {
                   <button
                     type="button"
                     onClick={() => setIsChatOpen((prev) => !prev)}
-                    className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/50"
+                    className="rounded-full border border-[#f1c0ff] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
                   >
                     {isChatOpen ? "Hide Fonda" : "Open Fonda"}
                   </button>
                 </div>
               </div>
             </div>
-            <div className="text-sm text-slate-300 lg:max-w-md">
-              {loadingTrips && <p className="text-xs text-slate-400">Loading trips...</p>}
+            <div className="text-sm text-slate-600 lg:max-w-md">
+              {loadingTrips && <p className="text-xs text-slate-500">Loading trips...</p>}
               {tripError && <p className="text-rose-400">{tripError}</p>}
               {error && <p className="text-rose-400">{error}</p>}
               {!tripError && !error && (
@@ -908,7 +908,7 @@ export function TripDashboard() {
           </div>
 
           {selectedTrip && selectedTrip.days.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto rounded-full bg-white/5 px-3 py-2 text-xs">
+            <div className="flex gap-2 overflow-x-auto rounded-full bg-white/80 px-3 py-2 text-xs">
               {selectedTrip.days.map((day) => (
                 <button
                   key={day.id}
@@ -917,7 +917,7 @@ export function TripDashboard() {
                   className={`rounded-full px-4 py-1 transition ${
                     selectedDayId === day.id
                       ? "bg-white text-slate-900"
-                      : "bg-transparent text-slate-200 hover:bg-white/10"
+                      : "bg-transparent text-slate-700 hover:bg-white"
                   }`}
                 >
                   {format(new Date(day.date), "MMM d")}
@@ -927,9 +927,9 @@ export function TripDashboard() {
           )}
 
           {showTripForm && (
-            <form className="grid gap-4 rounded-2xl border border-white/10 bg-slate-900/40 p-4" onSubmit={createTrip}>
+            <form className="grid gap-4 rounded-2xl border border-[#f5d9ff] bg-white/80 p-4" onSubmit={createTrip}>
               <div className="sm:col-span-2">
-                <label className="text-sm text-slate-300" htmlFor="title">
+                <label className="text-sm text-slate-600" htmlFor="title">
                   Trip title
                 </label>
                 <input
@@ -937,25 +937,25 @@ export function TripDashboard() {
                   required
                   value={tripForm.title}
                   onChange={(e) => setTripForm((prev) => ({ ...prev, title: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                  className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                   placeholder="Neon Riviera"
                 />
               </div>
               <div>
-                <label className="text-sm text-slate-300" htmlFor="homeCity">
+                <label className="text-sm text-slate-600" htmlFor="homeCity">
                   Base city
                 </label>
                 <input
                   id="homeCity"
                   value={tripForm.homeCity}
                   onChange={(e) => setTripForm((prev) => ({ ...prev, homeCity: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                  className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                   placeholder="Lisbon"
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm text-slate-300" htmlFor="startDate">
+                  <label className="text-sm text-slate-600" htmlFor="startDate">
                     Start date
                   </label>
                   <input
@@ -963,11 +963,11 @@ export function TripDashboard() {
                     type="date"
                     value={tripForm.startDate}
                     onChange={(e) => setTripForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                    className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-300" htmlFor="endDate">
+                  <label className="text-sm text-slate-600" htmlFor="endDate">
                     End date
                   </label>
                   <input
@@ -975,19 +975,19 @@ export function TripDashboard() {
                     type="date"
                     value={tripForm.endDate}
                     onChange={(e) => setTripForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                    className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                   />
                 </div>
               </div>
               <div className="sm:col-span-2">
-                <label className="text-sm text-slate-300" htmlFor="description">
+                <label className="text-sm text-slate-600" htmlFor="description">
                   Notes / intent
                 </label>
                 <textarea
                   id="description"
                   value={tripForm.description}
                   onChange={(e) => setTripForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                  className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                   rows={3}
                   placeholder="Anniversary loop, mix rooftop bars with train rides"
                 />
@@ -1004,13 +1004,13 @@ export function TripDashboard() {
         </section>
 
         {view === "calendar" ? (
-          <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+          <section className="space-y-4 rounded-2xl border border-[#f5d9ff] bg-white/80 p-6">
             {selectedTrip ? (
               <div className="space-y-6">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Trip calendar</p>
-                  <h2 className="text-2xl font-semibold text-white">{selectedTrip.title}</h2>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Trip calendar</p>
+                  <h2 className="text-2xl font-semibold text-slate-900">{selectedTrip.title}</h2>
+                  <p className="text-sm text-slate-600">
                     {selectedTrip.startDate
                       ? `${format(new Date(selectedTrip.startDate), "MMM d")} – ${
                           selectedTrip.endDate
@@ -1021,7 +1021,7 @@ export function TripDashboard() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="grid grid-cols-7 text-xs uppercase tracking-[0.4em] text-slate-500">
+                  <div className="grid grid-cols-7 text-xs uppercase tracking-[0.4em] text-fuchsia-500">
                     {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label) => (
                       <div key={label} className="text-center">
                         {label}
@@ -1048,19 +1048,19 @@ export function TripDashboard() {
                               className={`h-28 rounded-2xl border px-2 py-2 text-left text-xs transition ${
                                 tripDay
                                   ? isSelected
-                                    ? "border-white bg-white/10"
-                                    : "border-white/10 bg-white/5 hover:border-white"
-                                  : "border-white/5 bg-transparent text-slate-500"
+                                    ? "border-[#e8b7ff] bg-white"
+                                    : "border-[#f5d9ff] bg-white/80 hover:border-[#d77dff]"
+                                  : "border-[#f9e9ff] bg-transparent text-fuchsia-500"
                               } ${tripDay ? "cursor-pointer" : "cursor-default"}`}
                             >
-                              <div className="flex items-center justify-between text-slate-400">
-                                <span className="text-sm font-semibold text-white">
+                              <div className="flex items-center justify-between text-slate-500">
+                                <span className="text-sm font-semibold text-slate-900">
                                   {dateValue.getDate()}
                                 </span>
                                 {tripDay && <span className="text-[10px] uppercase">{tripDay.city}</span>}
                               </div>
                               {tripDay ? (
-                                <ul className="mt-2 space-y-1 text-[11px] text-slate-200">
+                                <ul className="mt-2 space-y-1 text-[11px] text-slate-700">
                                   {(tripDay.activities || []).slice(0, 2).map((activity) => (
                                     <li
                                       key={activity.id}
@@ -1076,11 +1076,11 @@ export function TripDashboard() {
                                           ? format(new Date(activity.startTime), "HH:mm")
                                           : "--:--"}
                                       </span>
-                                      <span className="text-white">{activity.title}</span>
+                                      <span className="text-slate-900">{activity.title}</span>
                                     </li>
                                   ))}
                                   {(tripDay.activities?.length || 0) > 2 && (
-                                    <li className="text-slate-400">
+                                    <li className="text-slate-500">
                                       + {(tripDay.activities?.length || 0) - 2} more
                                     </li>
                                   )}
@@ -1100,13 +1100,13 @@ export function TripDashboard() {
                   <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),320px]">
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Selected day</p>
-                        <h3 className="text-xl font-semibold text-white">
+                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Selected day</p>
+                        <h3 className="text-xl font-semibold text-slate-900">
                           {format(new Date(calendarDay.date), "EEEE, MMMM d")}
                         </h3>
-                        <p className="text-sm text-slate-400">{calendarDay.city}</p>
+                        <p className="text-sm text-slate-600">{calendarDay.city}</p>
                         {calendarDay.notes && (
-                          <p className="mt-2 text-sm text-slate-300">{calendarDay.notes}</p>
+                          <p className="mt-2 text-sm text-slate-600">{calendarDay.notes}</p>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -1118,50 +1118,50 @@ export function TripDashboard() {
                               onClick={() => setCalendarEventId(activity.id)}
                               className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
                                 activity.id === calendarEventId
-                                  ? "border-white bg-white/10"
-                                  : "border-white/10 bg-slate-900/30 hover:border-white"
+                                  ? "border-[#e8b7ff] bg-white"
+                                  : "border-[#f5d9ff] bg-white/70 hover:border-[#d77dff]"
                               }`}
                             >
-                              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                              <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
                                 {formatTimeRange(activity)}
                               </p>
-                              <p className="text-sm font-semibold text-white">{activity.title}</p>
+                              <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
                               {activity.location && (
-                                <p className="text-xs text-slate-300">{activity.location}</p>
+                                <p className="text-xs text-slate-600">{activity.location}</p>
                               )}
                             </button>
                           ))
                         ) : (
-                          <p className="text-sm text-slate-400">No activities scheduled.</p>
+                          <p className="text-sm text-slate-600">No activities scheduled.</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/30 p-4">
+                    <div className="space-y-3 rounded-2xl border border-[#f5d9ff] bg-white/70 p-4">
                       {calendarEvent ? (
                         <>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Event detail</p>
-                            <h4 className="text-lg font-semibold text-white">{calendarEvent.title}</h4>
-                            <p className="text-sm text-slate-300">{formatTimeRange(calendarEvent)}</p>
+                            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Event detail</p>
+                            <h4 className="text-lg font-semibold text-slate-900">{calendarEvent.title}</h4>
+                            <p className="text-sm text-slate-600">{formatTimeRange(calendarEvent)}</p>
                           </div>
                           {calendarEvent.description && (
-                            <p className="text-sm text-slate-200">{calendarEvent.description}</p>
+                            <p className="text-sm text-slate-700">{calendarEvent.description}</p>
                           )}
                           {calendarEvent.location && (
-                            <p className="text-sm text-slate-200">
+                            <p className="text-sm text-slate-700">
                               Destination: {calendarEvent.location}
                             </p>
                           )}
                           {calendarEvent.startLocation && (
-                            <p className="text-sm text-slate-400">
+                            <p className="text-sm text-slate-600">
                               Starts at {calendarEvent.startLocation}
                             </p>
                           )}
                           {calendarEvent.travelSummary && (
-                            <p className="text-sm text-emerald-300">{calendarEvent.travelSummary}</p>
+                            <p className="text-sm text-emerald-600">{calendarEvent.travelSummary}</p>
                           )}
-                          <div className="overflow-hidden rounded-xl border border-white/10">
+                          <div className="overflow-hidden rounded-xl border border-[#f5d9ff]">
                             {calendarEvent.location ? (
                               <iframe
                                 title={`Map for ${calendarEvent.title}`}
@@ -1172,7 +1172,7 @@ export function TripDashboard() {
                                 loading="lazy"
                               />
                             ) : (
-                              <div className="flex h-48 items-center justify-center bg-slate-900/60 text-xs text-slate-500">
+                              <div className="flex h-48 items-center justify-center bg-white/90 text-xs text-slate-500">
                                 No address set.
                               </div>
                             )}
@@ -1184,7 +1184,7 @@ export function TripDashboard() {
                               )}&destination=${encodeURIComponent(calendarEvent.location || "")}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs text-sky-300 underline hover:text-sky-200"
+                              className="text-xs text-sky-600 underline hover:text-sky-800"
                             >
                               Open in Google Maps
                             </a>
@@ -1195,40 +1195,40 @@ export function TripDashboard() {
                               setSelectedDayId(calendarDay.id);
                               setView("timeline");
                             }}
-                            className="rounded-full border border-white/30 px-4 py-2 text-sm text-white transition hover:border-white"
+                            className="rounded-full border border-[#ebaef5] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
                           >
                             Edit in timeline
                           </button>
                         </>
-                      ) : (
-                        <p className="text-sm text-slate-400">Select an activity to see details.</p>
-                      )}
+                        ) : (
+                          <p className="text-sm text-slate-600">Select an activity to see details.</p>
+                        )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400">Select a day to see details.</p>
+                  <p className="text-sm text-slate-600">Select a day to see details.</p>
                 )}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-400">
+              <div className="rounded-2xl border border-dashed border-[#f5d9ff] p-10 text-center text-slate-500">
                 Select or create a trip to view its calendar.
               </div>
             )}
           </section>
         ) : (
           <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr),360px]">
-            <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+            <section className="space-y-4 rounded-2xl border border-[#f5d9ff] bg-white/80 p-6">
             {selectedTrip ? (
               <div className="space-y-5">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Current trip</p>
-                  <h2 className="text-2xl font-semibold text-white">{selectedTrip.title}</h2>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Current trip</p>
+                  <h2 className="text-2xl font-semibold text-slate-900">{selectedTrip.title}</h2>
+                  <p className="text-sm text-slate-600">
                     {selectedTrip.homeCity || clientEnv.NEXT_PUBLIC_DEFAULT_HOME_CITY}
                   </p>
                 </div>
                 {selectedTrip.days.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto rounded-full bg-white/5 px-2 py-1 text-xs">
+                  <div className="flex gap-2 overflow-x-auto rounded-full bg-white/80 px-2 py-1 text-xs">
                     {selectedTrip.days.map((day) => (
                       <button
                         key={day.id}
@@ -1237,7 +1237,7 @@ export function TripDashboard() {
                         className={`rounded-full px-3 py-1 transition ${
                           selectedDayId === day.id
                             ? "bg-white text-slate-900"
-                            : "bg-transparent text-slate-200 hover:bg-white/10"
+                            : "bg-transparent text-slate-700 hover:bg-white"
                         }`}
                       >
                         {format(new Date(day.date), "MMM d")}
@@ -1249,15 +1249,15 @@ export function TripDashboard() {
                 {selectedDay ? (
                   <div className="space-y-5">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Day overview</p>
-                      <h3 className="text-xl font-semibold text-white">
+                      <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Day overview</p>
+                      <h3 className="text-xl font-semibold text-slate-900">
                         {format(new Date(selectedDay.date), "EEEE, MMMM d")}
                       </h3>
                     </div>
 
                     <form className="grid gap-4 md:grid-cols-2" onSubmit={saveDay}>
                       <div className="relative">
-                        <label className="text-xs text-slate-400" htmlFor="dayCity">
+                        <label className="text-xs text-fuchsia-500" htmlFor="dayCity">
                           City
                         </label>
                         <input
@@ -1265,28 +1265,28 @@ export function TripDashboard() {
                           autoComplete="off"
                           value={cityQuery}
                           onChange={(e) => handleCityInputChange(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/70 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                         />
                         {(citySuggestionsLoading || cityDetailsLoading) && (
-                          <span className="absolute right-3 top-[30px] text-xs text-slate-400">
+                          <span className="absolute right-3 top-[30px] text-xs text-slate-500">
                             {cityDetailsLoading ? "Loading place..." : "Searching..."}
                           </span>
                         )}
                         {citySuggestionsError && (
-                          <p className="mt-1 text-xs text-rose-300">{citySuggestionsError}</p>
+                          <p className="mt-1 text-xs text-rose-500">{citySuggestionsError}</p>
                         )}
                         {citySuggestions.length > 0 && cityQuery && (
-                          <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-2xl border border-white/10 bg-[#050112]/95 text-sm shadow-xl">
+                          <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-2xl border border-[#f5d9ff] bg-white/95 text-sm shadow-xl">
                             {citySuggestions.map((suggestion) => (
                               <li key={suggestion.placeId}>
                                 <button
                                   type="button"
                                   onClick={() => handleCitySuggestionSelect(suggestion)}
-                                  className="flex w-full flex-col items-start gap-0.5 px-4 py-2 text-left text-slate-100 hover:bg-white/10"
+                                  className="flex w-full flex-col items-start gap-0.5 px-4 py-2 text-left text-slate-900 hover:bg-white"
                                 >
                                   <span className="font-medium">{suggestion.primary}</span>
                                   {suggestion.secondary && (
-                                    <span className="text-xs text-slate-400">{suggestion.secondary}</span>
+                                    <span className="text-xs text-slate-500">{suggestion.secondary}</span>
                                   )}
                                 </button>
                               </li>
@@ -1295,7 +1295,7 @@ export function TripDashboard() {
                         )}
                       </div>
                       <div>
-                        <label className="text-xs text-slate-400" htmlFor="dayNotes">
+                        <label className="text-xs text-fuchsia-500" htmlFor="dayNotes">
                           Notes / plans
                         </label>
                         <textarea
@@ -1303,7 +1303,7 @@ export function TripDashboard() {
                           rows={3}
                           value={dayForm.notes}
                           onChange={(e) => setDayForm((prev) => ({ ...prev, notes: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/70 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                           placeholder="Morning wander, afternoon train, late dinner"
                         />
                       </div>
@@ -1318,25 +1318,25 @@ export function TripDashboard() {
 
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Timeline</p>
+                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Timeline</p>
                         {orderedActivities.length ? (
                           <ol className="space-y-2">
                             {orderedActivities.map((activity) => (
                               <li
                                 key={activity.id}
-                                className="rounded-2xl border border-white/10 bg-slate-900/30 px-4 py-2"
+                                className="rounded-2xl border border-[#f5d9ff] bg-white/70 px-4 py-2"
                               >
                                 <div className="flex items-center justify-between gap-3">
                                   <div>
-                                    <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                                    <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
                                       {formatTimeRange(activity)}
                                     </p>
-                                  <p className="text-sm font-semibold text-white">{activity.title}</p>
+                                  <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
                                   {activity.description && (
-                                    <p className="text-xs text-slate-400">{activity.description}</p>
+                                    <p className="text-xs text-slate-600">{activity.description}</p>
                                   )}
                                   {activity.location && (
-                                    <p className="text-xs text-slate-300">
+                                    <p className="text-xs text-slate-600">
                                       {activity.location}
                                     </p>
                                   )}
@@ -1346,7 +1346,7 @@ export function TripDashboard() {
                                     </p>
                                   )}
                                   {activity.travelSummary && (
-                                    <p className="text-xs text-emerald-300">
+                                    <p className="text-xs text-emerald-600">
                                       {activity.travelSummary}
                                     </p>
                                   )}
@@ -1357,24 +1357,24 @@ export function TripDashboard() {
                                       )}&destination=${encodeURIComponent(activity.location)}`}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="text-xs text-sky-300 underline hover:text-sky-200"
+                                      className="text-xs text-sky-600 underline hover:text-sky-800"
                                     >
                                       Open route in Google Maps
                                     </a>
                                   )}
                                 </div>
-                                  <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-300">
+                                  <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-600">
                                     <button
                                       type="button"
                                       onClick={() => handleEditActivity(activity)}
-                                      className="rounded-full border border-white/30 px-2 py-0.5 hover:border-white"
+                                      className="rounded-full border border-[#ebaef5] px-2 py-0.5 hover:border-[#d77dff]"
                                     >
                                       Edit
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => deleteActivity(activity.id)}
-                                      className="rounded-full border border-white/30 px-2 py-0.5 text-rose-200 hover:border-rose-200"
+                                      className="rounded-full border border-[#ebaef5] px-2 py-0.5 text-rose-500 hover:border-rose-200"
                                     >
                                       Remove
                                     </button>
@@ -1384,17 +1384,17 @@ export function TripDashboard() {
                             ))}
                           </ol>
                         ) : (
-                          <p className="text-sm text-slate-400">No scheduled items yet.</p>
+                          <p className="text-sm text-slate-600">No scheduled items yet.</p>
                         )}
                       </div>
 
-                      <form className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/30 p-3" onSubmit={saveActivity}>
-                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                      <form className="space-y-3 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3" onSubmit={saveActivity}>
+                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
                           {editingActivityId ? "Edit activity" : "Add activity"}
                         </p>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <label className="text-xs text-slate-400" htmlFor="startTime">
+                            <label className="text-xs text-fuchsia-500" htmlFor="startTime">
                               Start
                             </label>
                             <input
@@ -1403,11 +1403,11 @@ export function TripDashboard() {
                               required
                               value={activityForm.startTime}
                               onChange={(e) => setActivityForm((prev) => ({ ...prev, startTime: e.target.value }))}
-                              className="mt-1 w-full rounded-xl border border-white/30 bg-white/15 px-3 py-2 text-sm text-white outline-none placeholder-white/70 focus:border-white/70"
+                              className="mt-1 w-full rounded-xl border border-[#ebaef5] bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-500 focus:border-[#cf6dff]"
                             />
                           </div>
                           <div>
-                            <label className="text-xs text-slate-400" htmlFor="endTime">
+                            <label className="text-xs text-fuchsia-500" htmlFor="endTime">
                               End (optional)
                             </label>
                             <input
@@ -1415,12 +1415,12 @@ export function TripDashboard() {
                               type="time"
                               value={activityForm.endTime}
                               onChange={(e) => setActivityForm((prev) => ({ ...prev, endTime: e.target.value }))}
-                              className="mt-1 w-full rounded-xl border border-white/30 bg-white/15 px-3 py-2 text-sm text-white outline-none placeholder-white/70 focus:border-white/70"
+                              className="mt-1 w-full rounded-xl border border-[#ebaef5] bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-500 focus:border-[#cf6dff]"
                             />
                           </div>
                         </div>
                       <div>
-                        <label className="text-xs text-slate-400" htmlFor="activityTitle">
+                        <label className="text-xs text-fuchsia-500" htmlFor="activityTitle">
                           Title
                         </label>
                         <input
@@ -1428,7 +1428,7 @@ export function TripDashboard() {
                             required
                             value={activityForm.title}
                             onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/85 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                             placeholder="Midnight rooftop bar"
                           />
                         </div>
@@ -1437,31 +1437,31 @@ export function TripDashboard() {
                           placeholder="Optional notes"
                           value={activityForm.notes}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/85 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                           rows={2}
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-slate-400" htmlFor="activityLocation">
+                        <label className="text-xs text-fuchsia-500" htmlFor="activityLocation">
                           Address (optional)
                         </label>
                         <input
                           id="activityLocation"
                           value={activityForm.location}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, location: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                           placeholder="123 Rue Oberkampf, Paris"
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-slate-400" htmlFor="activityStartLocation">
+                        <label className="text-xs text-fuchsia-500" htmlFor="activityStartLocation">
                           Starting address (optional)
                         </label>
                         <input
                           id="activityStartLocation"
                           value={activityForm.startLocation}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, startLocation: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
                           placeholder="Hotel de Ville"
                         />
                       </div>
@@ -1481,7 +1481,7 @@ export function TripDashboard() {
                             <button
                               type="button"
                               onClick={cancelActivityEdit}
-                              className="rounded-full border border-white/30 px-4 py-2 text-sm text-white transition hover:border-white"
+                              className="rounded-full border border-[#ebaef5] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
                             >
                               Cancel
                             </button>
@@ -1491,9 +1491,9 @@ export function TripDashboard() {
                     </div>
 
                     {selectedDayPlace && (
-                      <div className="space-y-2 rounded-2xl border border-white/10 bg-slate-900/30 p-3">
-                        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">City map</p>
-                        <div className="overflow-hidden rounded-xl border border-white/10">
+                      <div className="space-y-2 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
+                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">City map</p>
+                        <div className="overflow-hidden rounded-xl border border-[#f5d9ff]">
                           {!mapError ? (
                             <Image
                               key={`${selectedDayPlace.lat},${selectedDayPlace.lng}`}
@@ -1516,10 +1516,10 @@ export function TripDashboard() {
                             />
                           )}
                         </div>
-                        <div className="flex flex-col gap-1 text-sm text-slate-200 md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-col gap-1 text-sm text-slate-700 md:flex-row md:items-center md:justify-between">
                           <div>
-                            <p className="font-medium text-white">{selectedDayPlace.description}</p>
-                            <p className="text-xs text-slate-400">
+                            <p className="font-medium text-slate-900">{selectedDayPlace.description}</p>
+                            <p className="text-xs text-slate-500">
                               {selectedDayPlace.lat.toFixed(3)}, {selectedDayPlace.lng.toFixed(3)}
                             </p>
                           </div>
@@ -1527,7 +1527,7 @@ export function TripDashboard() {
                             href={`https://www.google.com/maps/search/?api=1&query=${selectedDayPlace.lat},${selectedDayPlace.lng}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded-full border border-white/30 px-4 py-1 text-xs uppercase tracking-[0.3em] text-white transition hover:border-white"
+                            className="rounded-full border border-[#ebaef5] px-4 py-1 text-xs uppercase tracking-[0.3em] text-slate-900 transition hover:border-[#d77dff]"
                           >
                             Open maps
                           </a>
@@ -1536,11 +1536,11 @@ export function TripDashboard() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400">Select a day to edit it.</p>
+                  <p className="text-sm text-slate-600">Select a day to edit it.</p>
                 )}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-400">
+              <div className="rounded-2xl border border-dashed border-[#f5d9ff] p-10 text-center text-slate-500">
                 Select or create a trip to start planning.
               </div>
             )}
@@ -1548,11 +1548,11 @@ export function TripDashboard() {
 
           <div className="hidden lg:flex">
             {isChatOpen ? (
-              <div className="flex h-full flex-col space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+              <div className="flex h-full flex-col space-y-4 rounded-2xl border border-[#f5d9ff] bg-white/80 p-6">
                 {chatPanelContent}
               </div>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/20 bg-white/5 p-6 text-center text-slate-300">
+              <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-[#f1c0ff] bg-white/80 p-6 text-center text-slate-600">
                 <p className="text-sm">Need ideas or timing help?</p>
                 <button
                   type="button"
@@ -1578,8 +1578,8 @@ export function TripDashboard() {
         </div>
 
         {isChatOpen && (
-          <div className="fixed inset-0 z-40 bg-black/70 px-4 py-6 lg:hidden">
-            <div className="mx-auto flex h-full max-w-md flex-col space-y-4 rounded-2xl border border-white/10 bg-[#050112] p-5">
+          <div className="fixed inset-0 z-40 bg-white/80 px-4 py-6 lg:hidden">
+            <div className="mx-auto flex h-full max-w-md flex-col space-y-4 rounded-2xl border border-[#f5d9ff] bg-white p-5">
               {chatPanelContent}
             </div>
           </div>

@@ -20,14 +20,18 @@ function normalizeDate(value?: string | null) {
 }
 
 function buildDayEntries(startDate?: string, endDate?: string, city?: string) {
-  const start = normalizeDate(startDate);
-  const end = normalizeDate(endDate) || start;
-  if (!start) return [];
+  const parsedStart = normalizeDate(startDate);
+  const parsedEnd = normalizeDate(endDate);
+
+  // Fall back to whichever date we have, and finally to "today" so new trips always have at least one day.
+  const rangeStart = parsedStart ?? parsedEnd ?? new Date();
+  const rangeEnd = parsedEnd ?? parsedStart ?? rangeStart;
+  const dayCity = city || DEFAULT_CITY;
 
   const days = [] as { date: Date; city: string }[];
-  const cursor = new Date(start);
-  while (cursor <= (end ?? start)) {
-    days.push({ date: new Date(cursor), city: city || DEFAULT_CITY });
+  const cursor = new Date(rangeStart);
+  while (cursor <= rangeEnd) {
+    days.push({ date: new Date(cursor), city: dayCity });
     cursor.setDate(cursor.getDate() + 1);
   }
   return days;
@@ -80,14 +84,14 @@ export async function POST(req: Request) {
   try {
     const { account } = await authenticateRequest(req);
     const json = await req.json();
-  const parsed = createTripSchema.safeParse(json);
+    const parsed = createTripSchema.safeParse(json);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.flatten().fieldErrors },
-      { status: 400 },
-    );
-  }
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
 
     const { title, description, startDate, endDate, homeCity } = parsed.data;
 

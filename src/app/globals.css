@@ -3,21 +3,24 @@
 @tailwind utilities;
 
 :root {
-  --background: #050109;
-  --foreground: #faf5ff;
-  --neon-pink: #ff47da;
+  --background: #fff8ff;
+  --foreground: #1c1038;
+  --neon-pink: #ff2fd1;
   --neon-orange: #ffb347;
-  --neon-blue: #66f6ff;
+  --neon-blue: #5fe6ff;
+  --dayglow-lilac: #f5d9ff;
+  --dayglow-sky: #dff7ff;
+  --dayglow-rose: #ffe6f4;
 }
 
 body {
   min-height: 100vh;
   color: var(--foreground);
   background:
-    radial-gradient(circle at 10% 20%, rgba(255, 104, 249, 0.35), transparent 45%),
-    radial-gradient(circle at 80% 10%, rgba(102, 246, 255, 0.25), transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(255, 179, 71, 0.25), transparent 35%),
-    #020008;
+    radial-gradient(circle at 12% 18%, rgba(255, 71, 218, 0.35), transparent 45%),
+    radial-gradient(circle at 78% 12%, rgba(102, 246, 255, 0.35), transparent 40%),
+    radial-gradient(circle at 40% 82%, rgba(255, 200, 120, 0.35), transparent 35%),
+    linear-gradient(135deg, #fff4ff, #e9fbff 55%, #fff5e1);
   font-family: "Geist", "Geist Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background-attachment: fixed;
 }
@@ -26,15 +29,16 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: repeating-linear-gradient(
-      120deg,
-      rgba(255, 255, 255, 0.05) 0,
-      rgba(255, 255, 255, 0.05) 1px,
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.25) 0,
+      rgba(255, 255, 255, 0.25) 1px,
       transparent 1px,
-      transparent 35px
+      transparent 42px
     ),
-    radial-gradient(circle, rgba(255, 255, 255, 0.08) 0, transparent 50%);
-  opacity: 0.35;
+    radial-gradient(circle, rgba(255, 255, 255, 0.25) 0, transparent 55%);
+  opacity: 0.45;
   pointer-events: none;
   animation: pulse 12s ease-in-out infinite alternate;
 }
@@ -50,21 +54,28 @@ body::before {
   }
 }
 
+
+.dayglow-page {
+  background: transparent;
+  color: var(--foreground);
+}
+
 .psychedelic-card {
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: linear-gradient(135deg, rgba(5, 1, 9, 0.4), rgba(92, 7, 82, 0.65));
-  box-shadow: 0 20px 35px rgba(5, 0, 15, 0.6);
-  backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 217, 255, 0.8);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 230, 253, 0.92));
+  box-shadow: 0 25px 50px rgba(210, 140, 255, 0.25);
+  backdrop-filter: blur(18px);
 }
 
 .psychedelic-button {
-  background: linear-gradient(120deg, var(--neon-pink), var(--neon-orange));
-  color: #0a0218;
+  background: linear-gradient(120deg, var(--neon-pink), var(--neon-orange), var(--neon-blue));
+  color: #2b0b35;
   font-weight: 600;
   transition: transform 200ms ease, box-shadow 200ms ease;
+  box-shadow: 0 15px 30px rgba(255, 47, 209, 0.25);
 }
 
 .psychedelic-button:hover {
   transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 10px 30px rgba(255, 71, 218, 0.35);
+  box-shadow: 0 18px 35px rgba(255, 47, 209, 0.35);
 }
