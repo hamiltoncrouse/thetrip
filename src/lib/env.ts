@@ -8,6 +8,9 @@ const serverSchema = z.object({
   OPENAI_MODEL: z.string().default("gpt-4.1-mini"),
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   HOTEL_API_KEY: z.string().optional(),
+  AMADEUS_CLIENT_ID: z.string().optional(),
+  AMADEUS_CLIENT_SECRET: z.string().optional(),
+  AMADEUS_ENV: z.enum(["test", "production"]).default("test"),
   FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
   STARTING_CREDITS: z
     .string()

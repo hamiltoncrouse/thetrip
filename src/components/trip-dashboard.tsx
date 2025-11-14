@@ -69,6 +69,17 @@ type ChatMessage = {
   text: string;
 };
 
+type HotelOption = {
+  id: string;
+  name: string;
+  address?: string;
+  distanceKm?: number;
+  price?: number;
+  currency?: string;
+  description?: string;
+  offer?: string;
+};
+
 const randomId = () => Math.random().toString(36).slice(2, 11);
 
 const emptyTripForm = {
@@ -133,6 +144,9 @@ export function TripDashboard() {
   const [chatLoading, setChatLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
+  const [hotelResults, setHotelResults] = useState<HotelOption[]>([]);
+  const [hotelLoading, setHotelLoading] = useState(false);
+  const [hotelError, setHotelError] = useState<string | null>(null);
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -299,9 +313,13 @@ export function TripDashboard() {
       setEditingActivityId(null);
       setActivityForm(emptyActivityForm);
       setCityQuery(dayPlaces[selectedDay.id]?.description || selectedDay.city || "");
+      setHotelResults([]);
+      setHotelError(null);
     } else {
       setDayForm(emptyDayForm);
       setCityQuery("");
+      setHotelResults([]);
+      setHotelError(null);
     }
   }, [selectedDay, dayPlaces]);
 
@@ -621,6 +639,49 @@ export function TripDashboard() {
     setActivityForm(emptyActivityForm);
   }
 
+  function appendHotelToNotes(hotel: HotelOption) {
+    setDayForm((prev) => {
+      const snippetParts = [hotel.name];
+      if (typeof hotel.price === "number" && hotel.currency) {
+        snippetParts.push(`(${hotel.price.toFixed(0)} ${hotel.currency})`);
+      }
+      if (hotel.address) snippetParts.push(hotel.address);
+      const snippet = snippetParts.filter(Boolean).join(" - ");
+      const existing = prev.notes?.trim();
+      const nextNotes = existing ? `${existing}\n${snippet}` : snippet;
+      return { ...prev, notes: nextNotes };
+    });
+  }
+
+  async function loadHotelsNearDay() {
+    if (!selectedDay || !selectedDayPlace) return;
+    setHotelLoading(true);
+    setHotelError(null);
+    try {
+      const checkIn = format(new Date(selectedDay.date), "yyyy-MM-dd");
+      const checkOut = format(addDays(new Date(selectedDay.date), 1), "yyyy-MM-dd");
+      const params = new URLSearchParams({
+        lat: String(selectedDayPlace.lat),
+        lng: String(selectedDayPlace.lng),
+        checkIn,
+        checkOut,
+        radius: "15",
+      });
+      const response = await fetch(`/api/hotels?${params.toString()}`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error || `Hotel search failed (${response.status})`);
+      }
+      const data = await response.json();
+      setHotelResults(data.hotels || []);
+    } catch (error) {
+      setHotelError(error instanceof Error ? error.message : "Could not load hotels");
+      setHotelResults([]);
+    } finally {
+      setHotelLoading(false);
+    }
+  }
+
   function handleCityInputChange(value: string) {
     suppressSuggestionsRef.current = false;
     setCityQuery(value);
@@ -722,8 +783,15 @@ export function TripDashboard() {
   const chatPanelContent = (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 pb-4">
-        <div className="flex items-center gap-3">
-          <Image src="/fonda.png" alt="Fonda avatar" width={48} height={48} className="rounded-full border border-[#f5d9ff]" />
+        <div className="flex items-center gap-4">
+          <Image
+            src="/fonda.png"
+            alt="Fonda avatar"
+            width={64}
+            height={64}
+            className="rounded-full border-4 border-white shadow-md"
+            priority
+          />
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Fonda</p>
             <h2 className="text-xl font-semibold text-slate-900">Travel consultant</h2>
@@ -1553,6 +1621,76 @@ export function TripDashboard() {
                             Open maps
                           </a>
                         </div>
+                      </div>
+                    )}
+
+                    {selectedDayPlace && (
+                      <div className="space-y-3 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Nearby stays</p>
+                            <p className="text-sm text-slate-600">Pull live offers within 15km.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={loadHotelsNearDay}
+                            disabled={hotelLoading}
+                            className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {hotelLoading ? "Searching..." : "Find hotels"}
+                          </button>
+                        </div>
+                        {hotelError && <p className="text-xs text-rose-500">{hotelError}</p>}
+                        {hotelResults.length > 0 ? (
+                          <ul className="space-y-3">
+                            {hotelResults.slice(0, 4).map((hotel) => (
+                              <li key={hotel.id} className="rounded-2xl border border-[#f5d9ff] bg-white/80 px-3 py-2 text-sm">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{hotel.name}</p>
+                                    {hotel.address && <p className="text-xs text-slate-600">{hotel.address}</p>}
+                                    <div className="text-xs text-slate-500">
+                                      {typeof hotel.price === "number" && hotel.currency && (
+                                        <span>
+                                          {hotel.price.toFixed(0)} {hotel.currency}
+                                        </span>
+                                      )}
+                                      {hotel.distanceKm && (
+                                        <span className="ml-2">{hotel.distanceKm.toFixed(1)} km away</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1 text-[10px] uppercase tracking-[0.2em] text-slate-600">
+                                    <button
+                                      type="button"
+                                      onClick={() => appendHotelToNotes(hotel)}
+                                      className="rounded-full border border-[#ebaef5] px-2 py-0.5 hover:border-[#d77dff]"
+                                    >
+                                      Add note
+                                    </button>
+                                    {hotel.offer && (
+                                      <a
+                                        href={hotel.offer}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="rounded-full border border-[#ebaef5] px-2 py-0.5 text-slate-900 hover:border-[#d77dff]"
+                                      >
+                                        Open
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                                {hotel.description && (
+                                  <p className="mt-1 text-xs text-slate-600">{hotel.description}</p>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-slate-500">
+                            {hotelLoading ? "Fetching nearby hotels..." : "No results yet — tap Find hotels."}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
