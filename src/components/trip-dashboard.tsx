@@ -790,14 +790,16 @@ export function TripDashboard() {
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 pb-4">
         <div className="flex items-center gap-4">
-          <Image
-            src="/fonda.png"
-            alt="Fonda avatar"
-            width={64}
-            height={64}
-            className="rounded-full border-4 border-white shadow-md"
-            priority
-          />
+          <div className="rounded-full border-4 border-white bg-white shadow-md">
+            <Image
+              src="/fonda.png"
+              alt="Fonda avatar"
+              width={64}
+              height={64}
+              className="rounded-full"
+              priority
+            />
+          </div>
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Fonda</p>
             <h2 className="text-xl font-semibold text-slate-900">Travel consultant</h2>
