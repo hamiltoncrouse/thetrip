@@ -608,8 +608,8 @@ export function TripDashboard() {
     setEditingActivityId(activity.id);
     setActivityForm({
       title: activity.title,
-      startTime: activity.startTime ? format(new Date(activity.startTime), "HH:mm") : "",
-      endTime: activity.endTime ? format(new Date(activity.endTime), "HH:mm") : "",
+      startTime: activity.startTime ? formatTime(activity.startTime) : "",
+      endTime: activity.endTime ? formatTime(activity.endTime) : "",
       notes: activity.description || "",
       location: activity.location || "",
       startLocation: activity.startLocation || "",
@@ -700,9 +700,9 @@ export function TripDashboard() {
       const items: Array<{ title?: string; description?: string }> = data.items || [];
       const response =
         items.length > 0
-          ? `Here’s a thread to pull:\n${items
+          ? items
               .map((item) => `• ${item.title || "Idea"}: ${item.description || "Give it a whirl."}`)
-              .join("\n")}`
+              .join("\n")
           : data.error || "Couldn’t reach my data sources, but I’ll keep watching the map for ideas.";
       setChatMessages((prev) => [...prev, { id: randomId(), role: "assistant", text: response }]);
     } catch (err) {
@@ -1091,9 +1091,7 @@ export function TripDashboard() {
                                       }}
                                     >
                                       <span className="text-slate-500">
-                                        {activity.startTime
-                                          ? format(new Date(activity.startTime), "HH:mm")
-                                          : "--:--"}
+                                        {formatTime(activity.startTime)}
                                       </span>
                                       <span className="text-slate-900">{activity.title}</span>
                                     </li>

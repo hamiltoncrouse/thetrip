@@ -39,6 +39,7 @@ function buildPrompt(city: string, day?: string, interests: string[] = []) {
   const dayLine = day ? `The date is ${day}.` : "The traveler didn't specify a date.";
   return `You are Fonda, a travel-planning copilot. Suggest vivid, specific activities or experiences in ${city}.
 ${dayLine} They are interested in ${interestsLine}.
+Keep each suggestion punchy (ideally one sentence).
 Return STRICT JSON matching this schema (no prose): {"suggestions":[{"title":"string","description":"string","suggestedTime":"HH:MM"}]}
 Focus on realistic plans you could add to an itinerary.`;
 }
