@@ -1,58 +1,6 @@
+import crypto from "node:crypto";
+
 import { serverEnv } from "@/lib/env";
-
-const TOKEN_URL = "https://api.amadeus.com/v1/security/oauth2/token";
-const TEST_TOKEN_URL = "https://test.api.amadeus.com/v1/security/oauth2/token";
-const API_BASE = "https://api.amadeus.com";
-const TEST_API_BASE = "https://test.api.amadeus.com";
-
-type TokenState = {
-  accessToken: string;
-  expiresAt: number;
-};
-
-let cachedToken: TokenState | null = null;
-
-function getBaseUrls() {
-  const isProduction = serverEnv.AMADEUS_ENV === "production";
-  return {
-    tokenUrl: isProduction ? TOKEN_URL : TEST_TOKEN_URL,
-    apiBase: isProduction ? API_BASE : TEST_API_BASE,
-  } as const;
-}
-
-function ensureCredentials() {
-  if (!serverEnv.AMADEUS_CLIENT_ID || !serverEnv.AMADEUS_CLIENT_SECRET) {
-    throw new Error("Amadeus credentials are not configured");
-  }
-}
-
-export async function getAmadeusToken() {
-  ensureCredentials();
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) {
-    return cachedToken.accessToken;
-  }
-  const { tokenUrl } = getBaseUrls();
-  const params = new URLSearchParams({
-    grant_type: "client_credentials",
-    client_id: serverEnv.AMADEUS_CLIENT_ID as string,
-    client_secret: serverEnv.AMADEUS_CLIENT_SECRET as string,
-  });
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Amadeus auth failed (${response.status}): ${text}`);
-  }
-  const data = (await response.json()) as { access_token: string; expires_in: number };
-  cachedToken = {
-    accessToken: data.access_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
-  };
-  return cachedToken.accessToken;
-}
 
 export type HotelSearchParams = {
   latitude: number;
@@ -77,221 +25,159 @@ export type HotelOffer = {
   offer?: string;
 };
 
-type RawHotelOffer = {
-  id?: string;
-  hotel?: {
-    hotelId?: string;
-    name?: string;
-    distance?: { value?: number };
-    address?: { lines?: string[]; cityName?: string };
-  };
-  offers?: Array<{
-    id?: string;
-    self?: string;
-    price?: { total?: string; currency?: string };
-    room?: { description?: { text?: string } };
-  }>;
-};
+const RAPID_HOST = serverEnv.RAPIDAPI_HOTELS_HOST;
+const RAPID_KEY = serverEnv.RAPIDAPI_HOTELS_KEY;
 
-type AmadeusSearchResponse = {
-  data?: RawHotelOffer[];
-};
+function ensureRapidCredentials() {
+  if (!RAPID_HOST || !RAPID_KEY) {
+    throw new Error("Hotels.com RapidAPI credentials are not configured");
+  }
+}
 
-type GeoHotelLookupParams = {
-  apiBase: string;
-  token: string;
-  latitude: number;
-  longitude: number;
-  radiusKm?: number;
-};
+export async function searchHotels(params: HotelSearchParams): Promise<HotelOffer[]> {
+  ensureRapidCredentials();
+  const host = RAPID_HOST as string;
+  const key = RAPID_KEY as string;
+  const baseUrl = `https://${host}`;
+  const url = new URL("/hotels/nearby", baseUrl);
+  url.searchParams.set("latitude", params.latitude.toFixed(6));
+  url.searchParams.set("longitude", params.longitude.toFixed(6));
+  url.searchParams.set("checkIn", params.checkIn);
+  url.searchParams.set("checkOut", buildCheckOut(params.checkIn, params.checkOut));
+  url.searchParams.set("adultsNumber", String(params.adults ?? 2));
+  if (params.radiusKm) {
+    url.searchParams.set("radius", params.radiusKm.toString());
+  }
+  url.searchParams.set("currency", params.currency || "USD");
+  url.searchParams.set("locale", "en_US");
+  url.searchParams.set("sortOrder", "PRICE");
+  if (params.limit) {
+    url.searchParams.set("pageNumber", "1");
+    url.searchParams.set("pageSize", String(params.limit));
+  }
 
-async function fetchHotelIdsByGeo({ apiBase, token, latitude, longitude, radiusKm }: GeoHotelLookupParams) {
-  const geoUrl = new URL("/v1/reference-data/locations/hotels/by-geocode", apiBase);
-  geoUrl.searchParams.set("latitude", latitude.toFixed(6));
-  geoUrl.searchParams.set("longitude", longitude.toFixed(6));
-  geoUrl.searchParams.set("radius", String(radiusKm ?? 15));
-  geoUrl.searchParams.set("radiusUnit", "KM");
-  geoUrl.searchParams.set("hotelSource", "ALL");
-
-  const response = await fetch(geoUrl, {
-    headers: { Authorization: `Bearer ${token}` },
+  const response = await fetch(url, {
+    headers: {
+      "X-RapidAPI-Key": key,
+      "X-RapidAPI-Host": host,
+    },
+    cache: "no-store",
   });
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Amadeus hotel lookup failed (${response.status}): ${text}`);
+    throw new Error(`Hotels.com search failed (${response.status}): ${text}`);
   }
 
-  type GeoHotel = {
-    hotelId?: string;
+  const payload = (await response.json()) as RapidHotelsResponse;
+  const results = Array.isArray(payload?.searchResults?.results) ? payload.searchResults.results : [];
+
+  return results
+    .map((hotel) => normalizeHotel(hotel, params))
+    .filter((hotel): hotel is HotelOffer => Boolean(hotel));
+}
+
+type RapidHotelsResponse = {
+  searchResults?: {
+    results?: RapidHotelResult[];
   };
+};
 
-  type GeoResponse = {
-    data?: GeoHotel[];
+type RapidHotelResult = {
+  id?: string | number;
+  name?: string;
+  address?: {
+    streetAddress?: string;
+    locality?: string;
+    countryName?: string;
+    region?: string;
   };
+  landmarks?: Array<{ label?: string; distance?: string }>;
+  ratePlan?: {
+    price?: {
+      current?: string;
+      exactCurrent?: number;
+    };
+  };
+  urls?: {
+    hotelInfositeUrl?: string;
+    hotelSearchResultUrl?: string;
+  };
+  starRating?: number;
+  neighborhood?: string;
+};
 
-  const payload = (await response.json()) as GeoResponse;
-  return (payload.data || [])
-    .map((entry) => entry.hotelId)
-    .filter((id): id is string => Boolean(id))
-    .slice(0, 20);
+function normalizeHotel(entry: RapidHotelResult, params: HotelSearchParams): HotelOffer | null {
+  const id = String(entry.id ?? crypto.randomUUID());
+  const name = entry.name?.trim();
+  if (!name) return null;
+
+  const priceValue =
+    typeof entry.ratePlan?.price?.exactCurrent === "number"
+      ? entry.ratePlan.price.exactCurrent
+      : parseCurrency(entry.ratePlan?.price?.current);
+
+  const addressParts = [
+    entry.address?.streetAddress,
+    entry.address?.locality,
+    entry.address?.region,
+    entry.address?.countryName,
+  ].filter(Boolean);
+
+  const address = addressParts.join(", ");
+  const distanceKm = parseDistance(entry.landmarks);
+  const offerUrl = buildOfferUrl(entry);
+  const desc = entry.neighborhood ? `${entry.neighborhood} • Hotels.com` : undefined;
+
+  return {
+    id,
+    name,
+    distanceKm,
+    address,
+    price: priceValue ?? undefined,
+    currency: params.currency || "USD",
+    description: desc,
+    offer: offerUrl,
+  };
 }
 
-export async function searchHotels(params: HotelSearchParams): Promise<HotelOffer[]> {
-  ensureCredentials();
-  const token = await getAmadeusToken();
-  const { apiBase } = getBaseUrls();
-  const hotelIds = await fetchHotelIdsByGeo({
-    apiBase,
-    token,
-    latitude: params.latitude,
-    longitude: params.longitude,
-    radiusKm: params.radiusKm,
-  });
-
-  if (!hotelIds.length) {
-    return [];
+function buildOfferUrl(entry: RapidHotelResult) {
+  if (entry.urls?.hotelInfositeUrl) {
+    return `https://www.hotels.com${entry.urls.hotelInfositeUrl}`;
   }
-
-  const collected: RawHotelOffer[] = [];
-  for (const batch of chunkHotelIds(hotelIds, 20)) {
-    const url = new URL("/v2/shopping/hotel-offers", apiBase);
-    url.searchParams.set("hotelIds", batch.join(","));
-    url.searchParams.set("adults", String(params.adults ?? 2));
-    url.searchParams.set("roomQuantity", "1");
-    url.searchParams.set("bestRateOnly", "true");
-    url.searchParams.set("view", "FULL");
-    url.searchParams.set("sort", "PRICE");
-    url.searchParams.set("checkInDate", params.checkIn);
-    if (params.checkOut) url.searchParams.set("checkOutDate", params.checkOut);
-    if (params.currency) url.searchParams.set("currency", params.currency);
-    if (params.limit) url.searchParams.set("page[limit]", String(params.limit));
-
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (response.status === 404) {
-      // Some IDs occasionally return 404 if they are no longer available. Skip and continue.
-      continue;
-    }
-
-    if (response.status === 400) {
-      collected.push(...(await fetchOffersPerId(batch, params, apiBase, token)));
-      continue;
-    }
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Amadeus hotels failed (${response.status}): ${text}`);
-    }
-
-    const payload = (await response.json()) as AmadeusSearchResponse;
-    if (Array.isArray(payload?.data)) {
-      collected.push(...payload.data);
-    }
+  if (entry.urls?.hotelSearchResultUrl) {
+    return `https://www.hotels.com${entry.urls.hotelSearchResultUrl}`;
   }
-  const normalized = collected.map((entry) => {
-    const primaryOffer = Array.isArray(entry?.offers) ? entry.offers[0] : null;
-    return {
-      id: entry?.hotel?.hotelId || entry?.id || primaryOffer?.id || crypto.randomUUID(),
-      name: entry?.hotel?.name || "Hotel",
-      distanceKm: entry?.hotel?.distance?.value,
-      address: [entry?.hotel?.address?.lines?.join(", "), entry?.hotel?.address?.cityName]
-        .filter(Boolean)
-        .join(", "),
-      price: primaryOffer?.price?.total ? Number(primaryOffer.price.total) : undefined,
-      currency: primaryOffer?.price?.currency,
-      description: primaryOffer?.room?.description?.text,
-      offer: primaryOffer?.self || primaryOffer?.id,
-    } satisfies HotelOffer;
-  });
-
-  if (normalized.length === 0) {
-    return buildFallbackHotels(params);
-  }
-
-  return normalized;
+  return entry.id ? `https://www.hotels.com/ho${entry.id}` : undefined;
 }
 
-function chunkHotelIds(ids: string[], size: number) {
-  const output: string[][] = [];
-  for (let index = 0; index < ids.length; index += size) {
-    output.push(ids.slice(index, index + size));
-  }
-  return output;
+function parseCurrency(value?: string | number | null) {
+  if (typeof value === "number") return value;
+  if (!value) return undefined;
+  const cleaned = value.replace(/[^0-9.]/g, "");
+  const parsed = Number.parseFloat(cleaned);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-async function fetchOffersPerId(
-  ids: string[],
-  params: HotelSearchParams,
-  apiBase: string,
-  token: string,
-): Promise<RawHotelOffer[]> {
-  const found: RawHotelOffer[] = [];
-  for (const id of ids) {
-    const url = new URL("/v2/shopping/hotel-offers", apiBase);
-    url.searchParams.set("hotelIds", id);
-    url.searchParams.set("adults", String(params.adults ?? 2));
-    url.searchParams.set("roomQuantity", "1");
-    url.searchParams.set("bestRateOnly", "true");
-    url.searchParams.set("view", "FULL");
-    url.searchParams.set("sort", "PRICE");
-    url.searchParams.set("checkInDate", params.checkIn);
-    if (params.checkOut) url.searchParams.set("checkOutDate", params.checkOut);
-    if (params.currency) url.searchParams.set("currency", params.currency);
-    if (params.limit) url.searchParams.set("page[limit]", String(params.limit));
-
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (response.status === 404) {
-      continue;
-    }
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Amadeus hotels failed (${response.status}): ${text}`);
-    }
-
-    const payload = (await response.json()) as AmadeusSearchResponse;
-    if (Array.isArray(payload?.data)) {
-      found.push(...payload.data);
-    }
+function parseDistance(landmarks?: Array<{ label?: string; distance?: string }>) {
+  const distanceText = landmarks?.find((item) => item?.distance)?.distance;
+  if (!distanceText) return undefined;
+  const match = distanceText.match(/([0-9.]+)/);
+  if (!match) return undefined;
+  const value = Number.parseFloat(match[1]);
+  if (!Number.isFinite(value)) return undefined;
+  if (/mile/i.test(distanceText)) {
+    return value * 1.60934;
   }
-  return found;
+  return value;
 }
 
-function buildFallbackHotels(params: HotelSearchParams): HotelOffer[] {
-  const cityLabel = params.cityName ?? "your destination";
-  return [
-    {
-      id: `${cityLabel}-1`,
-      name: `${cityLabel} Lights Hotel`,
-      address: `${cityLabel} city center`,
-      distanceKm: 1.2,
-      price: 240,
-      currency: params.currency || "USD",
-      description: "Boutique stay with rooftop lounge and neon-lit suites.",
-    },
-    {
-      id: `${cityLabel}-2`,
-      name: `Midnight ${cityLabel} Residences`,
-      address: `${cityLabel} arts district`,
-      distanceKm: 2.4,
-      price: 185,
-      currency: params.currency || "USD",
-      description: "Loft-style rooms, late checkout, vinyl library in the lobby.",
-    },
-    {
-      id: `${cityLabel}-3`,
-      name: `${cityLabel} Soundwave Inn`,
-      address: `${cityLabel} waterfront`,
-      distanceKm: 3.1,
-      price: 320,
-      currency: params.currency || "USD",
-      description: "Poolside cabanas, on-site espresso bar, bikes for dawn rides.",
-    },
-  ];
+function buildCheckOut(checkIn: string, provided?: string) {
+  if (provided) return provided;
+  const date = new Date(checkIn);
+  if (Number.isNaN(date.valueOf())) {
+    return checkIn;
+  }
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split("T")[0];
 }

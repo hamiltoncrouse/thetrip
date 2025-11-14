@@ -11,6 +11,8 @@ const serverSchema = z.object({
   AMADEUS_CLIENT_ID: z.string().optional(),
   AMADEUS_CLIENT_SECRET: z.string().optional(),
   AMADEUS_ENV: z.enum(["test", "production"]).default("test"),
+  RAPIDAPI_HOTELS_KEY: z.string().optional(),
+  RAPIDAPI_HOTELS_HOST: z.string().optional(),
   FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
   STARTING_CREDITS: z
     .string()
