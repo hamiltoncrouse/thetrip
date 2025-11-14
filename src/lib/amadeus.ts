@@ -102,9 +102,29 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
     const text = await response.text();
     throw new Error(`Amadeus hotels failed (${response.status}): ${text}`);
   }
-  const payload = await response.json();
+  type RawHotelOffer = {
+    id?: string;
+    hotel?: {
+      hotelId?: string;
+      name?: string;
+      distance?: { value?: number };
+      address?: { lines?: string[]; cityName?: string };
+    };
+    offers?: Array<{
+      id?: string;
+      self?: string;
+      price?: { total?: string; currency?: string };
+      room?: { description?: { text?: string } };
+    }>;
+  };
+
+  type AmadeusSearchResponse = {
+    data?: RawHotelOffer[];
+  };
+
+  const payload = (await response.json()) as AmadeusSearchResponse;
   const offers = Array.isArray(payload?.data) ? payload.data : [];
-  return offers.map((entry: any) => {
+  return offers.map((entry) => {
     const primaryOffer = Array.isArray(entry?.offers) ? entry.offers[0] : null;
     return {
       id: entry?.hotel?.hotelId || entry?.id || primaryOffer?.id || crypto.randomUUID(),
