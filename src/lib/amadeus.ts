@@ -76,6 +76,26 @@ export type HotelOffer = {
   offer?: string;
 };
 
+type RawHotelOffer = {
+  id?: string;
+  hotel?: {
+    hotelId?: string;
+    name?: string;
+    distance?: { value?: number };
+    address?: { lines?: string[]; cityName?: string };
+  };
+  offers?: Array<{
+    id?: string;
+    self?: string;
+    price?: { total?: string; currency?: string };
+    room?: { description?: { text?: string } };
+  }>;
+};
+
+type AmadeusSearchResponse = {
+  data?: RawHotelOffer[];
+};
+
 type GeoHotelLookupParams = {
   apiBase: string;
   token: string;
@@ -132,48 +152,40 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
     return [];
   }
 
-  const url = new URL("/v2/shopping/hotel-offers", apiBase);
-  url.searchParams.set("hotelIds", hotelIds.slice(0, 20).join(","));
-  url.searchParams.set("adults", String(params.adults ?? 2));
-  url.searchParams.set("roomQuantity", "1");
-  url.searchParams.set("bestRateOnly", "true");
-  url.searchParams.set("view", "FULL");
-  url.searchParams.set("sort", "PRICE");
-  url.searchParams.set("checkInDate", params.checkIn);
-  if (params.checkOut) url.searchParams.set("checkOutDate", params.checkOut);
-  if (params.currency) url.searchParams.set("currency", params.currency);
-  if (params.limit) url.searchParams.set("page[limit]", String(params.limit));
+  const collected: RawHotelOffer[] = [];
+  for (const batch of chunkHotelIds(hotelIds, 20)) {
+    const url = new URL("/v2/shopping/hotel-offers", apiBase);
+    url.searchParams.set("hotelIds", batch.join(","));
+    url.searchParams.set("adults", String(params.adults ?? 2));
+    url.searchParams.set("roomQuantity", "1");
+    url.searchParams.set("bestRateOnly", "true");
+    url.searchParams.set("view", "FULL");
+    url.searchParams.set("sort", "PRICE");
+    url.searchParams.set("checkInDate", params.checkIn);
+    if (params.checkOut) url.searchParams.set("checkOutDate", params.checkOut);
+    if (params.currency) url.searchParams.set("currency", params.currency);
+    if (params.limit) url.searchParams.set("page[limit]", String(params.limit));
 
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Amadeus hotels failed (${response.status}): ${text}`);
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.status === 404) {
+      // Some IDs occasionally return 404 if they are no longer available. Skip and continue.
+      continue;
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Amadeus hotels failed (${response.status}): ${text}`);
+    }
+
+    const payload = (await response.json()) as AmadeusSearchResponse;
+    if (Array.isArray(payload?.data)) {
+      collected.push(...payload.data);
+    }
   }
-  type RawHotelOffer = {
-    id?: string;
-    hotel?: {
-      hotelId?: string;
-      name?: string;
-      distance?: { value?: number };
-      address?: { lines?: string[]; cityName?: string };
-    };
-    offers?: Array<{
-      id?: string;
-      self?: string;
-      price?: { total?: string; currency?: string };
-      room?: { description?: { text?: string } };
-    }>;
-  };
-
-  type AmadeusSearchResponse = {
-    data?: RawHotelOffer[];
-  };
-
-  const payload = (await response.json()) as AmadeusSearchResponse;
-  const offers = Array.isArray(payload?.data) ? payload.data : [];
-  return offers.map((entry) => {
+  return collected.map((entry) => {
     const primaryOffer = Array.isArray(entry?.offers) ? entry.offers[0] : null;
     return {
       id: entry?.hotel?.hotelId || entry?.id || primaryOffer?.id || crypto.randomUUID(),
@@ -188,4 +200,12 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
       offer: primaryOffer?.self || primaryOffer?.id,
     } satisfies HotelOffer;
   });
+}
+
+function chunkHotelIds(ids: string[], size: number) {
+  const output: string[][] = [];
+  for (let index = 0; index < ids.length; index += size) {
+    output.push(ids.slice(index, index + size));
+  }
+  return output;
 }
