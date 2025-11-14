@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest, AuthError } from "@/lib/auth";
+import { fetchTravelMetadata } from "@/lib/travel";
 
 const updateActivitySchema = z.object({
   title: z.string().min(1).optional(),
@@ -95,6 +96,25 @@ export async function PATCH(
 
     if (updates.endTime && updates.startTime && updates.endTime < updates.startTime) {
       updates.endTime = new Date((updates.startTime as Date).getTime() + 60 * 60 * 1000);
+    }
+
+    const nextStartLocation =
+      parsed.data.startLocation !== undefined ? parsed.data.startLocation : existing.startLocation;
+    const nextLocation = parsed.data.location !== undefined ? parsed.data.location : existing.location;
+
+    if (parsed.data.startLocation !== undefined || parsed.data.location !== undefined) {
+      if (nextStartLocation && nextLocation) {
+        const travel = await fetchTravelMetadata(nextStartLocation, nextLocation);
+        updates.travelDistanceMeters = travel?.distanceMeters ?? null;
+        updates.travelDurationSeconds = travel?.durationSeconds ?? null;
+        updates.travelSummary = travel?.summary ?? null;
+        updates.travelPolyline = travel?.polyline ?? null;
+      } else {
+        updates.travelDistanceMeters = null;
+        updates.travelDurationSeconds = null;
+        updates.travelSummary = null;
+        updates.travelPolyline = null;
+      }
     }
 
     const updated = await prisma.activity.update({ where: { id: activityId }, data: updates });

@@ -15,6 +15,10 @@ type Activity = {
   endTime?: string | null;
   location?: string | null;
   startLocation?: string | null;
+  travelDistanceMeters?: number | null;
+  travelDurationSeconds?: number | null;
+  travelSummary?: string | null;
+  travelPolyline?: string | null;
 };
 
 type TripDay = {
@@ -1024,6 +1028,23 @@ export function TripDashboard() {
                                     <p className="text-xs text-slate-500">
                                       Starts at {activity.startLocation}
                                     </p>
+                                  )}
+                                  {activity.travelSummary && (
+                                    <p className="text-xs text-emerald-300">
+                                      {activity.travelSummary}
+                                    </p>
+                                  )}
+                                  {activity.startLocation && activity.location && (
+                                    <a
+                                      href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+                                        activity.startLocation,
+                                      )}&destination=${encodeURIComponent(activity.location)}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-sky-300 underline hover:text-sky-200"
+                                    >
+                                      Open route in Google Maps
+                                    </a>
                                   )}
                                 </div>
                                   <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-300">

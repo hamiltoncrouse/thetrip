@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest, AuthError } from "@/lib/auth";
+import { fetchTravelMetadata } from "@/lib/travel";
 
 const createActivitySchema = z.object({
   title: z.string().min(1),
@@ -75,6 +76,8 @@ export async function POST(
       endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
     }
 
+    const travel = await fetchTravelMetadata(parsed.data.startLocation, parsed.data.location);
+
     const activity = await prisma.activity.create({
       data: {
         tripDayId: dayId,
@@ -82,6 +85,10 @@ export async function POST(
         description: parsed.data.notes || null,
         location: parsed.data.location || null,
         startLocation: parsed.data.startLocation || null,
+        travelDistanceMeters: travel?.distanceMeters ?? null,
+        travelDurationSeconds: travel?.durationSeconds ?? null,
+        travelSummary: travel?.summary ?? null,
+        travelPolyline: travel?.polyline ?? null,
         startTime,
         endTime,
       },

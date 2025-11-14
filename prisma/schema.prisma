@@ -75,6 +75,10 @@ model Activity {
   startTime   DateTime?
   endTime     DateTime?
   metadata    Json?
+  travelDistanceMeters Int?
+  travelDurationSeconds Int?
+  travelSummary        String?
+  travelPolyline       String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
