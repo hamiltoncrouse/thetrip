@@ -76,15 +76,61 @@ export type HotelOffer = {
   offer?: string;
 };
 
+type GeoHotelLookupParams = {
+  apiBase: string;
+  token: string;
+  latitude: number;
+  longitude: number;
+  radiusKm?: number;
+};
+
+async function fetchHotelIdsByGeo({ apiBase, token, latitude, longitude, radiusKm }: GeoHotelLookupParams) {
+  const geoUrl = new URL("/v1/reference-data/locations/hotels/by-geocode", apiBase);
+  geoUrl.searchParams.set("latitude", latitude.toString());
+  geoUrl.searchParams.set("longitude", longitude.toString());
+  geoUrl.searchParams.set("radius", String(radiusKm ?? 15));
+  geoUrl.searchParams.set("radiusUnit", "KM");
+  geoUrl.searchParams.set("page[limit]", "20");
+
+  const response = await fetch(geoUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Amadeus hotel lookup failed (${response.status}): ${text}`);
+  }
+
+  type GeoHotel = {
+    hotelId?: string;
+  };
+
+  type GeoResponse = {
+    data?: GeoHotel[];
+  };
+
+  const payload = (await response.json()) as GeoResponse;
+  return (payload.data || []).map((entry) => entry.hotelId).filter(Boolean) as string[];
+}
+
 export async function searchHotels(params: HotelSearchParams): Promise<HotelOffer[]> {
   ensureCredentials();
   const token = await getAmadeusToken();
   const { apiBase } = getBaseUrls();
-  const url = new URL("/v2/shopping/hotel-offers/by-location", apiBase);
-  url.searchParams.set("latitude", params.latitude.toString());
-  url.searchParams.set("longitude", params.longitude.toString());
-  url.searchParams.set("radius", String(params.radiusKm ?? 15));
-  url.searchParams.set("radiusUnit", "KM");
+  const hotelIds = await fetchHotelIdsByGeo({
+    apiBase,
+    token,
+    latitude: params.latitude,
+    longitude: params.longitude,
+    radiusKm: params.radiusKm,
+  });
+
+  if (!hotelIds.length) {
+    return [];
+  }
+
+  const url = new URL("/v2/shopping/hotel-offers", apiBase);
+  url.searchParams.set("hotelIds", hotelIds.slice(0, 20).join(","));
   url.searchParams.set("adults", String(params.adults ?? 2));
   url.searchParams.set("roomQuantity", "1");
   url.searchParams.set("bestRateOnly", "true");
