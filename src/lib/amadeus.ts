@@ -80,7 +80,7 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   ensureCredentials();
   const token = await getAmadeusToken();
   const { apiBase } = getBaseUrls();
-  const url = new URL("/v2/shopping/hotel-offers", apiBase);
+  const url = new URL("/v2/shopping/hotel-offers/by-location", apiBase);
   url.searchParams.set("latitude", params.latitude.toString());
   url.searchParams.set("longitude", params.longitude.toString());
   url.searchParams.set("radius", String(params.radiusKm ?? 15));
