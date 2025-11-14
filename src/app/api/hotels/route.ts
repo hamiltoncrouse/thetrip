@@ -12,6 +12,7 @@ const paramsSchema = z.object({
   adults: z.coerce.number().optional(),
   radius: z.coerce.number().optional(),
   currency: z.string().optional(),
+  city: z.string().optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
       checkIn: parsed.data.checkIn,
       checkOut: parsed.data.checkOut,
       currency: parsed.data.currency,
+      cityName: parsed.data.city,
     });
 
     return NextResponse.json({ hotels });

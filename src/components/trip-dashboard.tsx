@@ -670,6 +670,7 @@ export function TripDashboard() {
         checkIn,
         checkOut,
         radius: "15",
+        city: selectedDay.city || "",
       });
       const response = await fetch(`/api/hotels?${params.toString()}`, {
         headers: authHeaders,
