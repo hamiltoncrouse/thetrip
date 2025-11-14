@@ -28,12 +28,10 @@ const responseSchema = {
           suggestedTime: { type: "string" },
         },
         required: ["title", "description"],
-        additionalProperties: false,
       },
     },
   },
   required: ["suggestions"],
-  additionalProperties: false,
 } satisfies Record<string, unknown>;
 
 function buildPrompt(city: string, day?: string, interests: string[] = []) {

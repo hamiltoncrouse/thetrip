@@ -50,21 +50,32 @@ export async function authenticateRequest(request: Request): Promise<AuthContext
 
   const email = coerceEmail(decoded.uid, decoded.email);
   const homeCity = coerceHomeCity(decoded);
-  const account = await prisma.user.upsert({
-    where: { id: decoded.uid },
-    update: {
-      email,
-      displayName: decoded.name ?? null,
-      homeCity,
-    },
-    create: {
-      id: decoded.uid,
-      email,
-      displayName: decoded.name ?? null,
-      homeCity,
-      credits: serverEnv.STARTING_CREDITS ?? 50,
-    },
-  });
+  let account = await prisma.user.findUnique({ where: { id: decoded.uid } });
+
+  if (account) {
+    account = await prisma.user.update({
+      where: { id: decoded.uid },
+      data: { email, displayName: decoded.name ?? null, homeCity },
+    });
+  } else {
+    const existingByEmail = await prisma.user.findUnique({ where: { email } });
+    if (existingByEmail) {
+      account = await prisma.user.update({
+        where: { email },
+        data: { displayName: decoded.name ?? null, homeCity },
+      });
+    } else {
+      account = await prisma.user.create({
+        data: {
+          id: decoded.uid,
+          email,
+          displayName: decoded.name ?? null,
+          homeCity,
+          credits: serverEnv.STARTING_CREDITS ?? 50,
+        },
+      });
+    }
+  }
 
   return { token: decoded, account };
 }
