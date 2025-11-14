@@ -655,6 +655,10 @@ export function TripDashboard() {
 
   async function loadHotelsNearDay() {
     if (!selectedDay || !selectedDayPlace) return;
+    if (!authHeaders) {
+      setHotelError("Sign in to fetch hotels.");
+      return;
+    }
     setHotelLoading(true);
     setHotelError(null);
     try {
@@ -667,7 +671,9 @@ export function TripDashboard() {
         checkOut,
         radius: "15",
       });
-      const response = await fetch(`/api/hotels?${params.toString()}`);
+      const response = await fetch(`/api/hotels?${params.toString()}`, {
+        headers: authHeaders,
+      });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body?.error || `Hotel search failed (${response.status})`);
