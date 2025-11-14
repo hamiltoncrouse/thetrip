@@ -130,6 +130,7 @@ export function TripDashboard() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [view, setView] = useState<"timeline" | "calendar">("timeline");
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -213,6 +214,7 @@ export function TripDashboard() {
     fetchTrips();
   }, [idToken, authHeaders]);
 
+  const [view, setView] = useState<"timeline" | "calendar">("timeline");
   const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
   const selectedDay = selectedTrip?.days.find((day) => day.id === selectedDayId) || null;
   const orderedActivities = (selectedDay?.activities || [])
@@ -777,13 +779,37 @@ export function TripDashboard() {
                     Delete trip
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setIsChatOpen((prev) => !prev)}
-                  className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/50"
-                >
-                  {isChatOpen ? "Hide Fonda" : "Open Fonda"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setView("timeline")}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      view === "timeline"
+                        ? "bg-white text-slate-900"
+                        : "border border-white/30 text-white hover:border-white/60"
+                    }`}
+                  >
+                    Timeline
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView("calendar")}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      view === "calendar"
+                        ? "bg-white text-slate-900"
+                        : "border border-white/30 text-white hover:border-white/60"
+                    }`}
+                  >
+                    Calendar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsChatOpen((prev) => !prev)}
+                    className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/50"
+                  >
+                    {isChatOpen ? "Hide Fonda" : "Open Fonda"}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="text-sm text-slate-300 lg:max-w-md">
@@ -900,8 +926,72 @@ export function TripDashboard() {
           )}
         </section>
 
-        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr),360px]">
+        {view === "calendar" ? (
           <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+            {selectedTrip ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Trip calendar</p>
+                  <h2 className="text-2xl font-semibold text-white">{selectedTrip.title}</h2>
+                  <p className="text-sm text-slate-400">
+                    {selectedTrip.startDate
+                      ? `${format(new Date(selectedTrip.startDate), "MMM d")} – ${
+                          selectedTrip.endDate
+                            ? format(new Date(selectedTrip.endDate), "MMM d")
+                            : format(new Date(selectedTrip.startDate), "MMM d")
+                        }`
+                      : `${selectedTrip.days.length} day${selectedTrip.days.length === 1 ? "" : "s"}`}
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {selectedTrip.days.map((day) => (
+                    <button
+                      key={day.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDayId(day.id);
+                        setView("timeline");
+                      }}
+                      className={`rounded-2xl border px-4 py-3 text-left transition hover:border-white ${
+                        selectedDayId === day.id ? "border-white bg-white/10" : "border-white/10 bg-white/5"
+                      }`}
+                    >
+                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                        {format(new Date(day.date), "EEE, MMM d")}
+                      </p>
+                      <p className="text-sm font-semibold text-white">{day.city}</p>
+                      {day.notes && <p className="mt-1 line-clamp-2 text-xs text-slate-400">{day.notes}</p>}
+                      <ul className="mt-2 space-y-1 text-xs text-slate-300">
+                        {(day.activities || []).slice(0, 2).map((activity) => (
+                          <li key={activity.id} className="flex gap-1">
+                            <span className="text-slate-500">
+                              {activity.startTime ? format(new Date(activity.startTime), "HH:mm") : "--:--"}
+                            </span>
+                            <span className="text-white">{activity.title}</span>
+                          </li>
+                        ))}
+                        {(day.activities?.length || 0) > 2 && (
+                          <li className="text-slate-400">+ {(day.activities?.length || 0) - 2} more</li>
+                        )}
+                      </ul>
+                    </button>
+                  ))}
+                  {!selectedTrip.days.length && (
+                    <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-slate-400">
+                      No days yet. Add a day from the timeline view.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-400">
+                Select or create a trip to view its calendar.
+              </div>
+            )}
+          </section>
+        ) : (
+          <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr),360px]">
+            <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
             {selectedTrip ? (
               <div className="space-y-5">
                 <div>
@@ -1249,6 +1339,7 @@ export function TripDashboard() {
             )}
           </div>
         </div>
+        )}
 
         <div className="lg:hidden">
           <button
