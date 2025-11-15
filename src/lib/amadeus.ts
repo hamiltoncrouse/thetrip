@@ -77,11 +77,11 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   }
 
   const payload = (await response.json()) as BookingSearchResponse;
-  const results = Array.isArray(payload?.data?.propertySearchListings)
-    ? payload.data.propertySearchListings
-    : [];
+  const listingsCandidate =
+    payload?.data?.propertySearchListings || payload?.data?.result || payload?.result || payload?.hotels;
+  const listings = Array.isArray(listingsCandidate) ? listingsCandidate : [];
 
-  const hotels = results
+  const hotels = listings
     .map((entry) => normalizeBookingHotel(entry, params))
     .filter((hotel): hotel is HotelOffer => Boolean(hotel));
 
@@ -106,7 +106,10 @@ type BookingLocationResponse = BookingLocationItem[] | { data?: BookingLocationI
 type BookingSearchResponse = {
   data?: {
     propertySearchListings?: BookingHotelResult[];
+    result?: BookingHotelResult[];
   };
+  result?: BookingHotelResult[];
+  hotels?: BookingHotelResult[];
 };
 
 type BookingHotelResult = {
