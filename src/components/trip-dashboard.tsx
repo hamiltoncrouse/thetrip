@@ -1494,6 +1494,19 @@ export function TripDashboard() {
                         <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
                           {editingActivityId ? "Edit activity" : "Add activity"}
                         </p>
+                        <div>
+                          <label className="text-xs text-fuchsia-500" htmlFor="activityTitle">
+                            Title
+                          </label>
+                          <input
+                            id="activityTitle"
+                            required
+                            value={activityForm.title}
+                            onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/85 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                            placeholder="Midnight rooftop bar"
+                          />
+                        </div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
                             <label className="text-xs text-fuchsia-500" htmlFor="startTime">
@@ -1520,19 +1533,6 @@ export function TripDashboard() {
                               className="mt-1 w-full rounded-xl border border-[#ebaef5] bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-500 focus:border-[#cf6dff]"
                             />
                           </div>
-                        </div>
-                      <div>
-                        <label className="text-xs text-fuchsia-500" htmlFor="activityTitle">
-                          Title
-                        </label>
-                        <input
-                            id="activityTitle"
-                            required
-                            value={activityForm.title}
-                            onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/85 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
-                            placeholder="Midnight rooftop bar"
-                          />
                         </div>
                       <div>
                         <textarea
