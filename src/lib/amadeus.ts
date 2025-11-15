@@ -74,6 +74,10 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
 
   if (!response.ok) {
     const text = await response.text();
+    if (response.status === 429) {
+      console.warn("Booking.com rate limit hit", text);
+      return buildFallbackHotels(params);
+    }
     throw new Error(`Booking.com search failed (${response.status}): ${text}`);
   }
 
@@ -169,6 +173,10 @@ async function resolveDestination({
 
   if (!response.ok) {
     const text = await response.text();
+    if (response.status === 429) {
+      console.warn("Booking.com destination lookup rate limit", text);
+      return null;
+    }
     throw new Error(`Booking.com destination lookup failed (${response.status}): ${text}`);
   }
 
