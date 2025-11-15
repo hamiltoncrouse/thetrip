@@ -39,21 +39,21 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   const host = RAPID_HOST as string;
   const key = RAPID_KEY as string;
   const baseUrl = `https://${host}`;
-  const url = new URL("/hotels/v2/search", baseUrl);
+  const url = new URL("/hotels/nearby", baseUrl);
   url.searchParams.set("latitude", params.latitude.toFixed(6));
   url.searchParams.set("longitude", params.longitude.toFixed(6));
-  url.searchParams.set("adults_number", String(params.adults ?? 2));
+  url.searchParams.set("adultsNumber", String(params.adults ?? 2));
   url.searchParams.set("locale", "en_US");
-  url.searchParams.set("sort_order", "PRICE");
-  url.searchParams.set("checkin_date", params.checkIn);
-  url.searchParams.set("checkout_date", buildCheckOut(params.checkIn, params.checkOut));
+  url.searchParams.set("sortOrder", "PRICE");
+  url.searchParams.set("checkIn", params.checkIn);
+  url.searchParams.set("checkOut", buildCheckOut(params.checkIn, params.checkOut));
   if (params.radiusKm) {
-    url.searchParams.set("search_radius", params.radiusKm.toString());
+    url.searchParams.set("radius", params.radiusKm.toString());
   }
   url.searchParams.set("currency", params.currency || "USD");
   if (params.limit) {
-    url.searchParams.set("page_number", "1");
-    url.searchParams.set("page_size", String(params.limit));
+    url.searchParams.set("pageNumber", "1");
+    url.searchParams.set("pageSize", String(params.limit));
   }
 
   const response = await fetch(url, {
