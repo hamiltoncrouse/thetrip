@@ -190,6 +190,9 @@ function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchPar
 
   const price = entry.property?.priceBreakdown?.grossPrice?.value;
   const currency = entry.property?.priceBreakdown?.grossPrice?.currency || params.currency || "USD";
+  const distanceValue = entry.property?.destinationInfo?.distanceFromDestination?.value;
+  const distanceUnit = entry.property?.destinationInfo?.distanceFromDestination?.unit;
+  const distanceKm = typeof distanceValue === "number" ? convertDistance(distanceValue, distanceUnit) : undefined;
   const address =
     entry.property?.destinationInfo?.displayLocation || entry.property?.destinationInfo?.city || params.cityName;
   const reviewScore = entry.property?.reviewScore;
@@ -203,7 +206,7 @@ function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchPar
   return {
     id,
     name,
-    distanceKm: undefined,
+    distanceKm,
     address,
     price: price ?? undefined,
     currency,
