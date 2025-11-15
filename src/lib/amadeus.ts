@@ -108,6 +108,7 @@ type BookingSearchResponse = {
   data?: {
     propertySearchListings?: BookingHotelResult[];
     result?: BookingHotelResult[];
+    hotels?: BookingHotelResult[];
   };
   result?: BookingHotelResult[];
   hotels?: BookingHotelResult[];
