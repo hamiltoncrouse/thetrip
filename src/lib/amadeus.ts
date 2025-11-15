@@ -23,6 +23,7 @@ export type HotelOffer = {
   currency?: string;
   description?: string;
   offer?: string;
+  reviewScore?: number;
 };
 
 const BOOKING_HOST = serverEnv.BOOKING_RAPIDAPI_HOST;
