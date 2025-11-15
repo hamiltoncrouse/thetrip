@@ -799,8 +799,8 @@ export function TripDashboard() {
             <Image
               src="/fonda.png"
               alt="Fonda avatar"
-              width={82}
-              height={82}
+              width={100}
+              height={100}
               className="rounded-full"
               priority
             />
@@ -1430,10 +1430,10 @@ export function TripDashboard() {
                               >
                                 <div className="flex items-center justify-between gap-3">
                                   <div>
-                                    <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
-                                      {formatTimeRange(activity)}
-                                    </p>
                                   <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
+                                  <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
+                                    {formatTimeRange(activity)}
+                                  </p>
                                   {activity.description && (
                                     <p className="text-xs text-slate-600">{activity.description}</p>
                                   )}
