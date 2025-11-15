@@ -77,6 +77,7 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   }
 
   const payload = (await response.json()) as BookingSearchResponse;
+  console.log("Booking search raw", JSON.stringify(payload).slice(0, 2000));
   const listingsCandidate =
     payload?.data?.propertySearchListings || payload?.data?.result || payload?.result || payload?.hotels;
   const listings = Array.isArray(listingsCandidate) ? listingsCandidate : [];
@@ -170,6 +171,7 @@ async function resolveDestination({
   }
 
   const data = (await response.json()) as BookingLocationResponse;
+  console.log("Booking destination raw", JSON.stringify(data).slice(0, 2000));
   const hits = Array.isArray(data) ? data : data?.data || [];
   const hit = hits[0];
   if (!hit?.dest_id) return null;
