@@ -216,6 +216,7 @@ function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchPar
     currency,
     description,
     offer: undefined,
+    reviewScore: reviewScore ?? undefined,
   };
 }
 

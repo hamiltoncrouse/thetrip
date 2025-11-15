@@ -78,6 +78,7 @@ type HotelOption = {
   currency?: string;
   description?: string;
   offer?: string;
+  reviewScore?: number;
 };
 
 const randomId = () => Math.random().toString(36).slice(2, 11);
@@ -147,6 +148,7 @@ export function TripDashboard() {
   const [hotelResults, setHotelResults] = useState<HotelOption[]>([]);
   const [hotelLoading, setHotelLoading] = useState(false);
   const [hotelError, setHotelError] = useState<string | null>(null);
+  const [hotelFilters, setHotelFilters] = useState({ minRating: 0, maxDistance: 0, maxPrice: 0 });
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -653,6 +655,8 @@ export function TripDashboard() {
     });
   }
 
+  const filteredHotels = useMemo(() => applyHotelFilters(hotelResults, hotelFilters), [hotelResults, hotelFilters]);
+
   async function loadHotelsNearDay() {
     if (!selectedDay || !selectedDayPlace) return;
     if (!authHeaders) {
@@ -681,6 +685,12 @@ export function TripDashboard() {
       }
       const data = await response.json();
       setHotelResults(data.hotels || []);
+      setHotelFilters((prev) => ({
+        minRating: 0,
+        maxDistance: 0,
+        maxPrice: 0,
+        ...prev,
+      }));
     } catch (error) {
       setHotelError(error instanceof Error ? error.message : "Could not load hotels");
       setHotelResults([]);
@@ -1639,6 +1649,7 @@ export function TripDashboard() {
                           <div>
                             <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Nearby stays</p>
                             <p className="text-sm text-slate-600">Pull live offers within 15km.</p>
+                            <p className="text-xs text-slate-500">Filter by rating, distance, or price.</p>
                           </div>
                           <button
                             type="button"
@@ -1651,8 +1662,57 @@ export function TripDashboard() {
                         </div>
                         {hotelError && <p className="text-xs text-rose-500">{hotelError}</p>}
                         {hotelResults.length > 0 ? (
+                          <>
+                            <div className="grid gap-2 text-xs text-slate-600 sm:grid-cols-3">
+                              <label className="flex flex-col gap-1">
+                                <span>Min rating</span>
+                                <select
+                                  value={hotelFilters.minRating}
+                                  onChange={(event) =>
+                                    setHotelFilters((prev) => ({ ...prev, minRating: Number(event.target.value) }))
+                                  }
+                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
+                                >
+                                  {[0, 6, 7, 8, 9].map((score) => (
+                                    <option key={score} value={score}>
+                                      {score === 0 ? "All" : `${score}+`}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="flex flex-col gap-1">
+                                <span>Max distance (km)</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={hotelFilters.maxDistance || ""}
+                                  onChange={(event) =>
+                                    setHotelFilters((prev) => ({
+                                      ...prev,
+                                      maxDistance: Number(event.target.value) || 0,
+                                    }))
+                                  }
+                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
+                                />
+                              </label>
+                              <label className="flex flex-col gap-1">
+                                <span>Max price ({hotelResults[0]?.currency || "USD"})</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={hotelFilters.maxPrice || ""}
+                                  onChange={(event) =>
+                                    setHotelFilters((prev) => ({
+                                      ...prev,
+                                      maxPrice: Number(event.target.value) || 0,
+                                    }))
+                                  }
+                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
+                                />
+                              </label>
+                            </div>
                           <ul className="space-y-3">
-                            {hotelResults.slice(0, 4).map((hotel) => (
+                            {filteredHotels.slice(0, 4).map((hotel) => (
                               <li key={hotel.id} className="rounded-2xl border border-[#f5d9ff] bg-white/80 px-3 py-2 text-sm">
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
@@ -1666,6 +1726,9 @@ export function TripDashboard() {
                                       )}
                                       {hotel.distanceKm && (
                                         <span className="ml-2">{hotel.distanceKm.toFixed(1)} km away</span>
+                                      )}
+                                      {hotel.reviewScore && (
+                                        <span className="ml-2">⭐ {hotel.reviewScore.toFixed(1)}</span>
                                       )}
                                     </div>
                                   </div>
@@ -1695,9 +1758,14 @@ export function TripDashboard() {
                               </li>
                             ))}
                           </ul>
+                          </>
                         ) : (
                           <p className="text-xs text-slate-500">
-                            {hotelLoading ? "Fetching nearby hotels..." : "No results yet — tap Find hotels."}
+                            {hotelLoading
+                              ? "Fetching nearby hotels..."
+                              : hotelResults.length
+                              ? "No hotels match your filters"
+                              : "No results yet — tap Find hotels."}
                           </p>
                         )}
                       </div>
@@ -1761,4 +1829,12 @@ export function TripDashboard() {
       </main>
     </div>
   );
+}
+function applyHotelFilters(hotels: HotelOption[], filters: { minRating: number; maxDistance: number; maxPrice: number }) {
+  return hotels.filter((hotel) => {
+    if (filters.minRating && (hotel.reviewScore ?? 0) < filters.minRating) return false;
+    if (filters.maxDistance && (hotel.distanceKm ?? Infinity) > filters.maxDistance) return false;
+    if (filters.maxPrice && (hotel.price ?? Infinity) > filters.maxPrice) return false;
+    return true;
+  });
 }
