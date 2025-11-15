@@ -57,8 +57,8 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   url.searchParams.set("languagecode", "en-us");
   url.searchParams.set("currency_code", params.currency || "USD");
   url.searchParams.set("location", destination.countryCode || "US");
-  url.searchParams.set("checkin_date", params.checkIn);
-  url.searchParams.set("checkout_date", params.checkOut ?? buildCheckOut(params.checkIn));
+  url.searchParams.set("arrival_date", params.checkIn);
+  url.searchParams.set("departure_date", params.checkOut ?? buildCheckOut(params.checkIn));
   if (params.limit) {
     url.searchParams.set("page_size", String(params.limit));
   }
