@@ -685,12 +685,6 @@ export function TripDashboard() {
       }
       const data = await response.json();
       setHotelResults(data.hotels || []);
-      setHotelFilters((prev) => ({
-        minRating: 0,
-        maxDistance: 0,
-        maxPrice: 0,
-        ...prev,
-      }));
     } catch (error) {
       setHotelError(error instanceof Error ? error.message : "Could not load hotels");
       setHotelResults([]);
