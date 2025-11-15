@@ -1223,10 +1223,10 @@ export function TripDashboard() {
                                   : "border-[#f5d9ff] bg-white/70 hover:border-[#d77dff]"
                               }`}
                             >
+                              <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
                               <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
                                 {formatTimeRange(activity)}
                               </p>
-                              <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
                               {activity.location && (
                                 <p className="text-xs text-slate-600">{activity.location}</p>
                               )}
