@@ -130,6 +130,10 @@ type BookingHotelResult = {
     destinationInfo?: {
       displayLocation?: string;
       city?: string;
+      distanceFromDestination?: {
+        value?: number;
+        unit?: string;
+      };
     };
     reviewScoreWord?: string;
     reviewScore?: number;
