@@ -79,7 +79,7 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   const payload = (await response.json()) as BookingSearchResponse;
   console.log("Booking search raw", JSON.stringify(payload).slice(0, 2000));
   const listingsCandidate =
-    payload?.data?.propertySearchListings || payload?.data?.result || payload?.result || payload?.hotels;
+    payload?.data?.propertySearchListings || payload?.data?.result || payload?.result || payload?.data?.hotels;
   const listings = Array.isArray(listingsCandidate) ? listingsCandidate : [];
 
   const hotels = listings
