@@ -115,30 +115,26 @@ type BookingSearchResponse = {
 };
 
 type BookingHotelResult = {
+  hotel_id?: number;
   propertyId?: string;
   propertyName?: string;
-  priceBreakDown?: {
-    grossPrice?: {
-      value?: number;
-      currency?: string;
+  property?: {
+    name?: string;
+    wishlistName?: string;
+    priceBreakdown?: {
+      grossPrice?: {
+        value?: number;
+        currency?: string;
+      };
     };
-  };
-  destinationInfo?: {
-    distanceFromDestination?: {
-      value?: number;
-      unit?: string;
+    destinationInfo?: {
+      displayLocation?: string;
+      city?: string;
     };
-    city?: string;
-    displayLocation?: string;
-  };
-  reviews?: {
-    aggregatedReview?: {
-      score?: number;
-      scale?: number;
-    };
-  };
-  link?: {
-    pageUrl?: string;
+    reviewScoreWord?: string;
+    reviewScore?: number;
+    latitude?: number;
+    longitude?: number;
   };
 };
 
@@ -184,28 +180,35 @@ async function resolveDestination({
 }
 
 function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchParams): HotelOffer | null {
-  const id = entry.propertyId ? String(entry.propertyId) : crypto.randomUUID();
-  const name = entry.propertyName?.trim();
+  const id = entry.propertyId
+    ? String(entry.propertyId)
+    : entry.hotel_id
+    ? String(entry.hotel_id)
+    : crypto.randomUUID();
+  const name = entry.property?.name?.trim() || entry.propertyName?.trim();
   if (!name) return null;
 
-  const price = entry.priceBreakDown?.grossPrice?.value;
-  const currency = entry.priceBreakDown?.grossPrice?.currency || params.currency || "USD";
-  const distanceValue = entry.destinationInfo?.distanceFromDestination?.value;
-  const distanceUnit = entry.destinationInfo?.distanceFromDestination?.unit;
-  const distanceKm = typeof distanceValue === "number" ? convertDistance(distanceValue, distanceUnit) : undefined;
-  const address = entry.destinationInfo?.displayLocation || entry.destinationInfo?.city || params.cityName;
-  const reviewScore = entry.reviews?.aggregatedReview?.score;
-  const description = reviewScore ? `${reviewScore.toFixed(1)} / 10 • Booking.com` : undefined;
+  const price = entry.property?.priceBreakdown?.grossPrice?.value;
+  const currency = entry.property?.priceBreakdown?.grossPrice?.currency || params.currency || "USD";
+  const address =
+    entry.property?.destinationInfo?.displayLocation || entry.property?.destinationInfo?.city || params.cityName;
+  const reviewScore = entry.property?.reviewScore;
+  const reviewWord = entry.property?.reviewScoreWord;
+  const description = reviewWord
+    ? `${reviewWord}${reviewScore ? ` • ${reviewScore.toFixed(1)}` : ""} • Booking.com`
+    : reviewScore
+    ? `${reviewScore.toFixed(1)} / 10 • Booking.com`
+    : undefined;
 
   return {
     id,
     name,
-    distanceKm,
+    distanceKm: undefined,
     address,
     price: price ?? undefined,
     currency,
     description,
-    offer: entry.link?.pageUrl,
+    offer: undefined,
   };
 }
 
