@@ -40,32 +40,25 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   const key = BOOKING_KEY as string;
   const baseUrl = `https://${host}`;
 
-  const destination = await resolveDestination({
-    baseUrl,
-    key,
-    host,
-    cityName: params.cityName,
-  });
-
+  const destination = await resolveDestination({ baseUrl, key, host, cityName: params.cityName });
   if (!destination) {
     return buildFallbackHotels(params);
   }
 
-  const url = new URL("/v1/hotels/search", baseUrl);
+  const url = new URL("/api/v1/hotels/searchHotels", baseUrl);
   url.searchParams.set("dest_id", destination.destId);
   url.searchParams.set("search_type", destination.searchType ?? "CITY");
-  url.searchParams.set("checkin_date", params.checkIn);
-  url.searchParams.set("checkout_date", buildCheckOut(params.checkIn, params.checkOut));
-  url.searchParams.set("adults_number", String(params.adults ?? 2));
-  url.searchParams.set("room_number", "1");
-  url.searchParams.set("order_by", "price");
+  url.searchParams.set("adults", String(params.adults ?? 2));
+  url.searchParams.set("children_age", "0");
+  url.searchParams.set("room_qty", "1");
+  url.searchParams.set("page_number", "1");
   url.searchParams.set("units", "metric");
-  url.searchParams.set("locale", "en-us");
-  url.searchParams.set("children_number", "0");
-  url.searchParams.set("filter_by_currency", params.currency || "USD");
+  url.searchParams.set("temperature_unit", "c");
+  url.searchParams.set("languagecode", "en-us");
+  url.searchParams.set("currency_code", params.currency || "USD");
+  url.searchParams.set("location", destination.countryCode || "US");
   if (params.limit) {
-    url.searchParams.set("page_number", "0");
-    url.searchParams.set("rows", String(params.limit));
+    url.searchParams.set("page_size", String(params.limit));
   }
 
   const response = await fetch(url, {
@@ -82,7 +75,9 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   }
 
   const payload = (await response.json()) as BookingSearchResponse;
-  const results = Array.isArray(payload?.result) ? payload.result : [];
+  const results = Array.isArray(payload?.data?.propertySearchListings)
+    ? payload.data.propertySearchListings
+    : [];
 
   const hotels = results
     .map((entry) => normalizeBookingHotel(entry, params))
@@ -94,6 +89,50 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
 type DestinationResult = {
   destId: string;
   searchType?: string;
+  countryCode?: string;
+};
+
+type BookingLocationItem = {
+  dest_id?: string | number;
+  dest_type?: string;
+  search_type?: string;
+  country_code?: string;
+};
+
+type BookingLocationResponse = BookingLocationItem[] | { data?: BookingLocationItem[] };
+
+type BookingSearchResponse = {
+  data?: {
+    propertySearchListings?: BookingHotelResult[];
+  };
+};
+
+type BookingHotelResult = {
+  propertyId?: string;
+  propertyName?: string;
+  priceBreakDown?: {
+    grossPrice?: {
+      value?: number;
+      currency?: string;
+    };
+  };
+  destinationInfo?: {
+    distanceFromDestination?: {
+      value?: number;
+      unit?: string;
+    };
+    city?: string;
+    displayLocation?: string;
+  };
+  reviews?: {
+    aggregatedReview?: {
+      score?: number;
+      scale?: number;
+    };
+  };
+  link?: {
+    pageUrl?: string;
+  };
 };
 
 async function resolveDestination({
@@ -108,9 +147,9 @@ async function resolveDestination({
   cityName?: string | null;
 }): Promise<DestinationResult | null> {
   if (!cityName) return null;
-  const url = new URL("/v1/hotels/locations", baseUrl);
-  url.searchParams.set("name", cityName);
-  url.searchParams.set("locale", "en-us");
+  const url = new URL("/api/v1/hotels/searchDestination", baseUrl);
+  url.searchParams.set("query", cityName);
+  url.searchParams.set("languagecode", "en-us");
 
   const response = await fetch(url, {
     headers: {
@@ -126,52 +165,29 @@ async function resolveDestination({
   }
 
   const data = (await response.json()) as BookingLocationResponse;
-  const hit = Array.isArray(data) ? data[0] : undefined;
+  const hits = Array.isArray(data) ? data : data?.data || [];
+  const hit = hits[0];
   if (!hit?.dest_id) return null;
   return {
     destId: String(hit.dest_id),
-    searchType: hit.dest_type || "CITY",
+    searchType: hit.search_type || hit.dest_type || "CITY",
+    countryCode: hit.country_code || "US",
   };
 }
 
-type BookingLocationResponse = Array<{
-  dest_id?: string | number;
-  dest_type?: string;
-}>;
-
-type BookingSearchResponse = {
-  result?: BookingHotelResult[];
-};
-
-type BookingHotelResult = {
-  hotel_id?: number;
-  hotel_name?: string;
-  distance_to_cc?: string;
-  min_total_price?: number;
-  price_breakdown?: {
-    gross_price?: number;
-    currency?: string;
-  };
-  currencycode?: string;
-  address?: string;
-  city_trans?: string;
-  review_score_word?: string;
-  url?: string;
-};
-
 function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchParams): HotelOffer | null {
-  const id = entry.hotel_id ? String(entry.hotel_id) : crypto.randomUUID();
-  const name = entry.hotel_name?.trim();
+  const id = entry.propertyId ? String(entry.propertyId) : crypto.randomUUID();
+  const name = entry.propertyName?.trim();
   if (!name) return null;
 
-  const price =
-    typeof entry.min_total_price === "number"
-      ? entry.min_total_price
-      : entry.price_breakdown?.gross_price;
-  const currency = entry.currencycode || entry.price_breakdown?.currency || params.currency || "USD";
-  const distanceKm = parseDistanceToKm(entry.distance_to_cc);
-  const address = entry.address || entry.city_trans || params.cityName;
-  const description = entry.review_score_word ? `${entry.review_score_word} • Booking.com` : undefined;
+  const price = entry.priceBreakDown?.grossPrice?.value;
+  const currency = entry.priceBreakDown?.grossPrice?.currency || params.currency || "USD";
+  const distanceValue = entry.destinationInfo?.distanceFromDestination?.value;
+  const distanceUnit = entry.destinationInfo?.distanceFromDestination?.unit;
+  const distanceKm = typeof distanceValue === "number" ? convertDistance(distanceValue, distanceUnit) : undefined;
+  const address = entry.destinationInfo?.displayLocation || entry.destinationInfo?.city || params.cityName;
+  const reviewScore = entry.reviews?.aggregatedReview?.score;
+  const description = reviewScore ? `${reviewScore.toFixed(1)} / 10 • Booking.com` : undefined;
 
   return {
     id,
@@ -181,20 +197,13 @@ function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchPar
     price: price ?? undefined,
     currency,
     description,
-    offer: entry.url,
+    offer: entry.link?.pageUrl,
   };
 }
 
-function parseDistanceToKm(value?: string) {
-  if (!value) return undefined;
-  const match = value.match(/([0-9.]+)/);
-  if (!match) return undefined;
-  const parsed = Number.parseFloat(match[1]);
-  if (!Number.isFinite(parsed)) return undefined;
-  if (value.toLowerCase().includes("mi")) {
-    return parsed * 1.60934;
-  }
-  return parsed;
+function convertDistance(value: number, unit?: string) {
+  if (!unit) return value;
+  return unit.toLowerCase().startsWith("mi") ? value * 1.60934 : value;
 }
 
 function buildCheckOut(checkIn: string, provided?: string) {
