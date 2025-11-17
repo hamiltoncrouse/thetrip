@@ -701,7 +701,7 @@ export function TripDashboard() {
     }, 250);
 
     return () => clearTimeout(handler);
-  }, [activityForm.title, titleSuggestEnabled]);
+  }, [activityForm.title, titleSuggestEnabled, selectedDayPlace]);
 
   async function loadHotelsNearDay(page = 1, append = false) {
     if (!selectedDay || !selectedDayPlace) return;

@@ -59,7 +59,7 @@ export async function POST(
           OR: [
             { userId: account.id },
             account.email ? { collaborators: { some: { email: account.email } } } : undefined,
-          ].filter(Boolean) as any,
+          ].filter(Boolean) as [{ userId: string } | { collaborators: { some: { email: string } } }],
         },
       },
     });
