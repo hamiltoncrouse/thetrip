@@ -35,7 +35,9 @@ function ensureBookingCredentials() {
   }
 }
 
-export async function searchHotels(params: HotelSearchParams): Promise<HotelOffer[]> {
+export async function searchHotels(
+  params: HotelSearchParams & { page?: number; pageSize?: number; priceMin?: number; priceMax?: number },
+): Promise<HotelOffer[]> {
   ensureBookingCredentials();
   const host = BOOKING_HOST as string;
   const key = BOOKING_KEY as string;
@@ -52,7 +54,8 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   url.searchParams.set("adults", String(params.adults ?? 2));
   url.searchParams.set("children_age", "0");
   url.searchParams.set("room_qty", "1");
-  url.searchParams.set("page_number", "1");
+  url.searchParams.set("page_number", String(params.page ?? 1));
+  url.searchParams.set("page_size", String(params.pageSize ?? params.limit ?? 20));
   url.searchParams.set("units", "metric");
   url.searchParams.set("temperature_unit", "c");
   url.searchParams.set("languagecode", "en-us");
@@ -60,9 +63,8 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelOffe
   url.searchParams.set("location", destination.countryCode || "US");
   url.searchParams.set("arrival_date", params.checkIn);
   url.searchParams.set("departure_date", params.checkOut ?? buildCheckOut(params.checkIn));
-  if (params.limit) {
-    url.searchParams.set("page_size", String(params.limit));
-  }
+  if (params.priceMin) url.searchParams.set("price_min", String(params.priceMin));
+  if (params.priceMax) url.searchParams.set("price_max", String(params.priceMax));
 
   const response = await fetch(url, {
     headers: {

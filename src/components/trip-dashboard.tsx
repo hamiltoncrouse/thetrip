@@ -149,6 +149,9 @@ export function TripDashboard() {
   const [hotelLoading, setHotelLoading] = useState(false);
   const [hotelError, setHotelError] = useState<string | null>(null);
   const [hotelFilters, setHotelFilters] = useState({ minRating: 0, maxDistance: 0, maxPrice: 0 });
+  const [hotelPage, setHotelPage] = useState(1);
+  const [hasMoreHotels, setHasMoreHotels] = useState(true);
+  const [hotelSort, setHotelSort] = useState<"price" | "rating" | "distance" | "none">("none");
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -655,9 +658,12 @@ export function TripDashboard() {
     });
   }
 
-  const filteredHotels = useMemo(() => applyHotelFilters(hotelResults, hotelFilters), [hotelResults, hotelFilters]);
+  const filteredHotels = useMemo(
+    () => applyHotelFilters(hotelResults, hotelFilters, hotelSort),
+    [hotelResults, hotelFilters, hotelSort],
+  );
 
-  async function loadHotelsNearDay() {
+  async function loadHotelsNearDay(page = 1, append = false) {
     if (!selectedDay || !selectedDayPlace) return;
     if (!authHeaders) {
       setHotelError("Sign in to fetch hotels.");
@@ -675,7 +681,10 @@ export function TripDashboard() {
         checkOut,
         radius: "15",
         city: selectedDay.city || "",
+        page: String(page),
+        limit: "20",
       });
+      if (hotelFilters.maxPrice) params.set("priceMax", String(hotelFilters.maxPrice));
       const response = await fetch(`/api/hotels?${params.toString()}`, {
         headers: authHeaders,
       });
@@ -684,10 +693,13 @@ export function TripDashboard() {
         throw new Error(body?.error || `Hotel search failed (${response.status})`);
       }
       const data = await response.json();
-      setHotelResults(data.hotels || []);
+      const incoming: HotelOption[] = data.hotels || [];
+      setHotelResults((prev) => (append ? [...prev, ...incoming] : incoming));
+      setHotelPage(page);
+      setHasMoreHotels(incoming.length >= 20);
     } catch (error) {
       setHotelError(error instanceof Error ? error.message : "Could not load hotels");
-      setHotelResults([]);
+      if (!append) setHotelResults([]);
     } finally {
       setHotelLoading(false);
     }
@@ -1647,7 +1659,7 @@ export function TripDashboard() {
                           </div>
                           <button
                             type="button"
-                            onClick={loadHotelsNearDay}
+                            onClick={() => loadHotelsNearDay(1, false)}
                             disabled={hotelLoading}
                             className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
                           >
@@ -1704,6 +1716,21 @@ export function TripDashboard() {
                                   className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
                                 />
                               </label>
+                              <label className="flex flex-col gap-1">
+                                <span>Sort by</span>
+                                <select
+                                  value={hotelSort}
+                                  onChange={(event) =>
+                                    setHotelSort(event.target.value as "price" | "rating" | "distance" | "none")
+                                  }
+                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
+                                >
+                                  <option value="none">Default</option>
+                                  <option value="price">Price</option>
+                                  <option value="rating">Rating</option>
+                                  <option value="distance">Distance</option>
+                                </select>
+                              </label>
                             </div>
                           <ul className="space-y-3">
                             {filteredHotels.slice(0, 4).map((hotel) => (
@@ -1751,7 +1778,19 @@ export function TripDashboard() {
                                 )}
                               </li>
                             ))}
-                          </ul>
+                            </ul>
+                            {hasMoreHotels && (
+                              <div className="pt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => loadHotelsNearDay(hotelPage + 1, true)}
+                                  disabled={hotelLoading}
+                                  className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {hotelLoading ? "Loading..." : "Load more"}
+                                </button>
+                              </div>
+                            )}
                           </>
                         ) : (
                           <p className="text-xs text-slate-500">
@@ -1824,11 +1863,28 @@ export function TripDashboard() {
     </div>
   );
 }
-function applyHotelFilters(hotels: HotelOption[], filters: { minRating: number; maxDistance: number; maxPrice: number }) {
-  return hotels.filter((hotel) => {
+function applyHotelFilters(
+  hotels: HotelOption[],
+  filters: { minRating: number; maxDistance: number; maxPrice: number },
+  sort: "price" | "rating" | "distance" | "none",
+) {
+  const filtered = hotels.filter((hotel) => {
     if (filters.minRating && (hotel.reviewScore ?? 0) < filters.minRating) return false;
     if (filters.maxDistance && (hotel.distanceKm ?? Infinity) > filters.maxDistance) return false;
     if (filters.maxPrice && (hotel.price ?? Infinity) > filters.maxPrice) return false;
     return true;
+  });
+
+  return filtered.sort((a, b) => {
+    if (sort === "price") {
+      return (a.price ?? Infinity) - (b.price ?? Infinity);
+    }
+    if (sort === "rating") {
+      return (b.reviewScore ?? 0) - (a.reviewScore ?? 0);
+    }
+    if (sort === "distance") {
+      return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+    }
+    return 0;
   });
 }
