@@ -676,7 +676,10 @@ export function TripDashboard() {
         titleSuggestionsAbortRef.current = controller;
         setTitleSuggestionsLoading(true);
         setTitleSuggestionsError(null);
-        const params = new URLSearchParams({ query: activityForm.title });
+        const params = new URLSearchParams({ query: activityForm.title, types: "establishment" });
+        if (selectedDayPlace) {
+          params.set("locationbias", `point:${selectedDayPlace.lat},${selectedDayPlace.lng}`);
+        }
         const response = await fetch(`/api/maps/autocomplete?${params.toString()}`, {
           signal: controller.signal,
         });

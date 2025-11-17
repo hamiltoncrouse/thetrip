@@ -28,10 +28,12 @@ export async function GET(request: NextRequest) {
 
   const params = new URLSearchParams({
     input: query,
-    types: "(cities)",
+    types: searchParams.get("types")?.trim() || "(cities)",
     key: serverEnv.GOOGLE_MAPS_API_KEY,
   });
   if (sessionToken) params.set("sessiontoken", sessionToken);
+  const locationBias = searchParams.get("locationbias")?.trim();
+  if (locationBias) params.set("locationbias", locationBias);
 
   const response = await fetch(`${GOOGLE_AUTOCOMPLETE_URL}?${params.toString()}`, { cache: "no-store" });
   if (!response.ok) {
