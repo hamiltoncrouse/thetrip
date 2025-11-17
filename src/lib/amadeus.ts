@@ -146,6 +146,7 @@ type BookingHotelResult = {
     reviewScore?: number;
     latitude?: number;
     longitude?: number;
+    countryCode?: string;
   };
 };
 
@@ -217,6 +218,14 @@ function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchPar
     : reviewScore
     ? `${reviewScore.toFixed(1)} / 10 • Booking.com`
     : undefined;
+  const offerUrl = buildBookingUrl({
+    id,
+    name,
+    countryCode: entry.property?.countryCode || entry.countryCode,
+    checkIn: params.checkIn,
+    checkOut: params.checkOut ?? buildCheckOut(params.checkIn),
+    adults: params.adults ?? 2,
+  });
 
   return {
     id,
@@ -226,7 +235,7 @@ function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchPar
     price: price ?? undefined,
     currency,
     description,
-    offer: undefined,
+    offer: offerUrl,
     reviewScore: reviewScore ?? undefined,
   };
 }
@@ -275,4 +284,26 @@ function buildFallbackHotels(params: HotelSearchParams): HotelOffer[] {
       description: "Poolside cabanas, on-site espresso bar, bikes for dawn rides.",
     },
   ];
+}
+function buildBookingUrl(args: { id: string; name: string; countryCode?: string; checkIn: string; checkOut: string; adults: number }) {
+  const slug = slugify(args.name);
+  const countrySegment = (args.countryCode || "us").toLowerCase();
+  const base = `https://www.booking.com/hotel/${countrySegment}/${slug}.html`;
+  const params = new URLSearchParams({
+    checkin: args.checkIn,
+    checkout: args.checkOut,
+    group_adults: String(args.adults || 2),
+    no_rooms: "1",
+    group_children: "0",
+    hotel_id: args.id,
+  });
+  return `${base}?${params.toString()}`;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+    .slice(0, 120);
 }
