@@ -55,7 +55,12 @@ export async function POST(
       where: {
         id: dayId,
         tripId,
-        trip: { userId: account.id },
+        trip: {
+          OR: [
+            { userId: account.id },
+            account.email ? { collaborators: { some: { email: account.email } } } : undefined,
+          ].filter(Boolean) as any,
+        },
       },
     });
 
