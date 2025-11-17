@@ -90,7 +90,7 @@ export async function searchHotels(
   const listings = Array.isArray(listingsCandidate) ? listingsCandidate : [];
 
   const hotels = listings
-    .map((entry) => normalizeBookingHotel(entry, params))
+    .map((entry) => normalizeBookingHotel(entry, params, destination))
     .filter((hotel): hotel is HotelOffer => Boolean(hotel));
 
   return hotels.length ? hotels : buildFallbackHotels(params);
@@ -196,7 +196,11 @@ async function resolveDestination({
   };
 }
 
-function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchParams): HotelOffer | null {
+function normalizeBookingHotel(
+  entry: BookingHotelResult,
+  params: HotelSearchParams,
+  destination: DestinationResult,
+): HotelOffer | null {
   const id = entry.propertyId
     ? String(entry.propertyId)
     : entry.hotel_id
@@ -226,6 +230,8 @@ function normalizeBookingHotel(entry: BookingHotelResult, params: HotelSearchPar
     checkIn: params.checkIn,
     checkOut: params.checkOut ?? buildCheckOut(params.checkIn),
     adults: params.adults ?? 2,
+    destId: destination.destId,
+    destType: destination.searchType ?? "city",
   });
 
   return {
@@ -286,25 +292,25 @@ function buildFallbackHotels(params: HotelSearchParams): HotelOffer[] {
     },
   ];
 }
-function buildBookingUrl(args: { id: string; name: string; countryCode?: string; checkIn: string; checkOut: string; adults: number }) {
-  const slug = slugify(args.name);
-  const countrySegment = (args.countryCode || "us").toLowerCase();
-  const base = `https://www.booking.com/hotel/${countrySegment}/${slug}.html`;
+function buildBookingUrl(args: {
+  id: string;
+  name: string;
+  countryCode?: string;
+  checkIn: string;
+  checkOut: string;
+  adults: number;
+  destId: string;
+  destType: string;
+}) {
   const params = new URLSearchParams({
-    checkin: args.checkIn,
-    checkout: args.checkOut,
+    dest_id: args.destId,
+    dest_type: args.destType,
+    arrival_date: args.checkIn,
+    departure_date: args.checkOut,
     group_adults: String(args.adults || 2),
     no_rooms: "1",
     group_children: "0",
-    hotel_id: args.id,
+    selected_hotels: args.id,
   });
-  return `${base}?${params.toString()}`;
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "")
-    .slice(0, 120);
+  return `https://www.booking.com/searchresults.html?${params.toString()}`;
 }
