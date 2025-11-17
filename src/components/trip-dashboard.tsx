@@ -1912,6 +1912,3 @@ function applyHotelFilters(
     return 0;
   });
 }
-async function shareTripWithEmail() {
-  // Old helper retained for reference; real implementation lives inside TripDashboard.
-}
