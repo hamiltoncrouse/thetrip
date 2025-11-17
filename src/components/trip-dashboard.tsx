@@ -1913,5 +1913,5 @@ function applyHotelFilters(
   });
 }
 async function shareTripWithEmail() {
-  // intentionally left undefined here; in-component definition used above
+  // Old helper retained for reference; real implementation lives inside TripDashboard.
 }
