@@ -311,6 +311,7 @@ function buildBookingUrl(args: {
     no_rooms: "1",
     group_children: "0",
     selected_hotels: args.id,
+    sb: "1",
   });
   return `https://www.booking.com/searchresults.html?${params.toString()}`;
 }
