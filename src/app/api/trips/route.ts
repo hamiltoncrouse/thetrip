@@ -48,10 +48,13 @@ export async function GET(request: Request) {
   try {
     const { account } = await authenticateRequest(request);
     const trips = await prisma.trip.findMany({
-      where: { userId: account.id },
+      where: {
+        OR: [{ userId: account.id }, { collaborators: { some: { email: account.email } } }],
+      },
       orderBy: { createdAt: "desc" },
       take: 25,
       include: {
+        collaborators: true,
         days: {
           orderBy: { date: "asc" },
           include: {
