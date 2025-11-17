@@ -124,6 +124,7 @@ type BookingSearchResponse = {
 type BookingHotelResult = {
   hotel_id?: number;
   propertyId?: string;
+  countryCode?: string;
   propertyName?: string;
   property?: {
     name?: string;
