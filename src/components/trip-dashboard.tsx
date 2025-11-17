@@ -644,20 +644,6 @@ export function TripDashboard() {
     setActivityForm(emptyActivityForm);
   }
 
-  function appendHotelToNotes(hotel: HotelOption) {
-    setDayForm((prev) => {
-      const snippetParts = [hotel.name];
-      if (typeof hotel.price === "number" && hotel.currency) {
-        snippetParts.push(`(${hotel.price.toFixed(0)} ${hotel.currency})`);
-      }
-      if (hotel.address) snippetParts.push(hotel.address);
-      const snippet = snippetParts.filter(Boolean).join(" - ");
-      const existing = prev.notes?.trim();
-      const nextNotes = existing ? `${existing}\n${snippet}` : snippet;
-      return { ...prev, notes: nextNotes };
-    });
-  }
-
   const filteredHotels = useMemo(
     () => applyHotelFilters(hotelResults, hotelFilters, hotelSort),
     [hotelResults, hotelFilters, hotelSort],
