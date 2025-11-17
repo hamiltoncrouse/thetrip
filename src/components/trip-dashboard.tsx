@@ -543,7 +543,10 @@ export function TripDashboard() {
 
   async function saveActivity(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedTrip || !selectedDay || !activityForm.title || !activityForm.startTime) return;
+    if (!selectedTrip || !selectedDay || !activityForm.title || !activityForm.startTime) {
+      setTripError("Title and start time are required to save an activity.");
+      return;
+    }
     setSavingActivity(true);
     setTripError(null);
     const payload = {
