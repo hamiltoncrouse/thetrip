@@ -153,6 +153,8 @@ export function TripDashboard() {
   const [hotelPage, setHotelPage] = useState(1);
   const [hasMoreHotels, setHasMoreHotels] = useState(true);
   const [hotelSort, setHotelSort] = useState<"price" | "rating" | "distance" | "none">("none");
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -692,6 +694,26 @@ export function TripDashboard() {
     }
   }
 
+  async function shareTripWithEmail() {
+    if (!selectedTripId || !shareEmail.trim() || !jsonHeaders) return;
+    setShareStatus(null);
+    try {
+      const res = await fetch(`/api/trips/${selectedTripId}/collaborators`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ email: shareEmail.trim() }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to share trip (${res.status})`);
+      }
+      setShareStatus("Shared");
+      setShareEmail("");
+    } catch (error) {
+      setShareStatus(error instanceof Error ? error.message : "Failed to share trip");
+    }
+  }
+
   function handleCityInputChange(value: string) {
     suppressSuggestionsRef.current = false;
     setCityQuery(value);
@@ -936,6 +958,26 @@ export function TripDashboard() {
                     </option>
                   ))}
                 </select>
+                {selectedTrip && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="email"
+                      placeholder="Share with Gmail"
+                      value={shareEmail}
+                      onChange={(event) => setShareEmail(event.target.value)}
+                      className="rounded-full border border-[#f1c0ff] bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => shareTripWithEmail()}
+                      disabled={!shareEmail.trim() || !selectedTripId}
+                      className="rounded-full border border-[#ebaef5] px-3 py-2 text-sm font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Share trip
+                    </button>
+                    {shareStatus && <p className="text-xs text-slate-600">{shareStatus}</p>}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowTripForm((prev) => !prev)}
@@ -1869,4 +1911,23 @@ function applyHotelFilters(
     }
     return 0;
   });
+}
+async function shareTripWithEmail() {
+  if (!selectedTripId || !shareEmail.trim() || !jsonHeaders) return;
+  setShareStatus(null);
+  try {
+    const res = await fetch(`/api/trips/${selectedTripId}/collaborators`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ email: shareEmail.trim() }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error || `Failed to share trip (${res.status})`);
+    }
+    setShareStatus("Shared");
+    setShareEmail("");
+  } catch (error) {
+    setShareStatus(error instanceof Error ? error.message : "Failed to share trip");
+  }
 }
