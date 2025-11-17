@@ -153,8 +153,6 @@ export function TripDashboard() {
   const [hotelPage, setHotelPage] = useState(1);
   const [hasMoreHotels, setHasMoreHotels] = useState(true);
   const [hotelSort, setHotelSort] = useState<"price" | "rating" | "distance" | "none">("none");
-  const [shareEmail, setShareEmail] = useState("");
-  const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
