@@ -155,6 +155,11 @@ export function TripDashboard() {
   const [hotelSort, setHotelSort] = useState<"price" | "rating" | "distance" | "none">("none");
   const [shareEmail, setShareEmail] = useState("");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [titleSuggestEnabled, setTitleSuggestEnabled] = useState(false);
+  const [titleSuggestions, setTitleSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [titleSuggestionsLoading, setTitleSuggestionsLoading] = useState(false);
+  const [titleSuggestionsError, setTitleSuggestionsError] = useState<string | null>(null);
+  const titleSuggestionsAbortRef = useRef<AbortController | null>(null);
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -652,6 +657,46 @@ export function TripDashboard() {
     [hotelResults, hotelFilters, hotelSort],
   );
 
+  useEffect(() => {
+    if (!titleSuggestEnabled) {
+      setTitleSuggestions([]);
+      setTitleSuggestionsError(null);
+      return;
+    }
+    if (!activityForm.title || activityForm.title.trim().length < 2) {
+      setTitleSuggestions([]);
+      setTitleSuggestionsError(null);
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      try {
+        titleSuggestionsAbortRef.current?.abort();
+        const controller = new AbortController();
+        titleSuggestionsAbortRef.current = controller;
+        setTitleSuggestionsLoading(true);
+        setTitleSuggestionsError(null);
+        const params = new URLSearchParams({ query: activityForm.title });
+        const response = await fetch(`/api/maps/autocomplete?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body?.error || "Autocomplete failed");
+        }
+        const data = await response.json();
+        setTitleSuggestions(data.predictions || []);
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        setTitleSuggestionsError(err instanceof Error ? err.message : "Autocomplete failed");
+      } finally {
+        setTitleSuggestionsLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(handler);
+  }, [activityForm.title, titleSuggestEnabled]);
+
   async function loadHotelsNearDay(page = 1, append = false) {
     if (!selectedDay || !selectedDayPlace) return;
     if (!authHeaders) {
@@ -691,6 +736,24 @@ export function TripDashboard() {
       if (!append) setHotelResults([]);
     } finally {
       setHotelLoading(false);
+    }
+  }
+
+  async function handleTitleSuggestionSelect(suggestion: PlaceSuggestion) {
+    try {
+      setTitleSuggestions([]);
+      setTitleSuggestionsError(null);
+      setActivityForm((prev) => ({ ...prev, title: suggestion.primary }));
+      const res = await fetch(`/api/maps/place?placeId=${suggestion.placeId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const address = data.address || suggestion.description;
+        if (address) {
+          setActivityForm((prev) => ({ ...prev, location: address }));
+        }
+      }
+    } catch (error) {
+      setTitleSuggestionsError(error instanceof Error ? error.message : "Failed to load place details");
     }
   }
 
@@ -1535,20 +1598,54 @@ export function TripDashboard() {
                         <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
                           {editingActivityId ? "Edit activity" : "Add activity"}
                         </p>
-                        <div>
-                          <label className="text-xs text-fuchsia-500" htmlFor="activityTitle">
-                            Title
+                      <div className="relative space-y-1">
+                        <div className="flex items-center justify-between text-xs text-fuchsia-500">
+                          <label htmlFor="activityTitle">Title</label>
+                          <label className="flex items-center gap-1 text-[11px] text-slate-600">
+                            <input
+                              type="checkbox"
+                              checked={titleSuggestEnabled}
+                              onChange={(event) => setTitleSuggestEnabled(event.target.checked)}
+                              className="h-3 w-3 rounded border-[#f5d9ff] text-fuchsia-500 focus:ring-0"
+                            />
+                            Suggest places
                           </label>
-                          <input
-                            id="activityTitle"
-                            required
-                            value={activityForm.title}
-                            onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/85 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
-                            placeholder="Midnight rooftop bar"
-                          />
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          id="activityTitle"
+                          required
+                          value={activityForm.title}
+                          onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/85 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                          placeholder="Midnight rooftop bar"
+                          autoComplete="off"
+                        />
+                        {titleSuggestionsError && (
+                          <p className="text-[11px] text-rose-500">{titleSuggestionsError}</p>
+                        )}
+                        {titleSuggestionsLoading && (
+                          <p className="text-[11px] text-slate-500">Searching places...</p>
+                        )}
+                        {titleSuggestions.length > 0 && titleSuggestEnabled && (
+                          <ul className="absolute z-30 mt-1 max-h-52 w-full overflow-auto rounded-2xl border border-[#f5d9ff] bg-white text-sm shadow-xl">
+                            {titleSuggestions.map((suggestion) => (
+                              <li key={suggestion.placeId}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleTitleSuggestionSelect(suggestion)}
+                                  className="flex w-full flex-col items-start gap-0.5 px-4 py-2 text-left hover:bg-white/80"
+                                >
+                                  <span className="font-medium text-slate-900">{suggestion.primary}</span>
+                                  {suggestion.secondary && (
+                                    <span className="text-xs text-slate-500">{suggestion.secondary}</span>
+                                  )}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                     <div className="grid gap-3 sm:grid-cols-2">
                           <div>
                             <label className="text-xs text-fuchsia-500" htmlFor="startTime">
                               Start
@@ -1558,9 +1655,9 @@ export function TripDashboard() {
                               type="time"
                               required
                               value={activityForm.startTime}
-                              onChange={(e) => setActivityForm((prev) => ({ ...prev, startTime: e.target.value }))}
-                              className="mt-1 w-full rounded-xl border border-[#ebaef5] bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-500 focus:border-[#cf6dff]"
-                            />
+                          onChange={(e) => setActivityForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-[#ebaef5] bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-500 focus:border-[#cf6dff]"
+                        />
                           </div>
                           <div>
                             <label className="text-xs text-fuchsia-500" htmlFor="endTime">
