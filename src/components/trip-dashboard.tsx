@@ -1913,21 +1913,5 @@ function applyHotelFilters(
   });
 }
 async function shareTripWithEmail() {
-  if (!selectedTripId || !shareEmail.trim() || !jsonHeaders) return;
-  setShareStatus(null);
-  try {
-    const res = await fetch(`/api/trips/${selectedTripId}/collaborators`, {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({ email: shareEmail.trim() }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body?.error || `Failed to share trip (${res.status})`);
-    }
-    setShareStatus("Shared");
-    setShareEmail("");
-  } catch (error) {
-    setShareStatus(error instanceof Error ? error.message : "Failed to share trip");
-  }
+  // intentionally left undefined here; in-component definition used above
 }
