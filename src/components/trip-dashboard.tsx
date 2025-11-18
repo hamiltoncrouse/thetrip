@@ -9,6 +9,7 @@ import { clientEnv } from "@/lib/env";
 
 type Activity = {
   id: string;
+  tripDayId: string;
   title: string;
   description?: string | null;
   startTime?: string | null;
