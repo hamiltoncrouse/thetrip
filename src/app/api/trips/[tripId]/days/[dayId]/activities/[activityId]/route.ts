@@ -13,7 +13,7 @@ const updateActivitySchema = z.object({
   location: z.string().optional(),
   startLocation: z.string().optional(),
   type: z.string().min(1).optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 function handleAuthError(error: unknown) {
