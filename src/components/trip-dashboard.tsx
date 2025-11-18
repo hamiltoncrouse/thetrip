@@ -190,6 +190,8 @@ export function TripDashboard() {
   const [hotelPage, setHotelPage] = useState(1);
   const [hasMoreHotels, setHasMoreHotels] = useState(true);
   const [hotelSort, setHotelSort] = useState<"price" | "rating" | "distance" | "none">("none");
+  const [isHotelActivity, setIsHotelActivity] = useState(false);
+  const [hotelStayNights, setHotelStayNights] = useState(1);
   const [hotelNights, setHotelNights] = useState(1);
   const [addingHotelId, setAddingHotelId] = useState<string | null>(null);
   const [hotelPlanError, setHotelPlanError] = useState<string | null>(null);
@@ -368,6 +370,8 @@ export function TripDashboard() {
       setDayForm({ city: selectedDay.city, notes: selectedDay.notes || "" });
       setEditingActivityId(null);
       setActivityForm(emptyActivityForm);
+      setIsHotelActivity(false);
+      setHotelStayNights(1);
       setCityQuery(dayPlaces[selectedDay.id]?.description || selectedDay.city || "");
       setHotelResults([]);
       setHotelError(null);
@@ -599,6 +603,8 @@ export function TripDashboard() {
       notes: activityForm.notes || undefined,
       location: activityForm.location || undefined,
       startLocation: activityForm.startLocation || undefined,
+      type: isHotelActivity ? "hotel" : undefined,
+      metadata: isHotelActivity ? { kind: "hotel", nights: hotelStayNights } : undefined,
     };
 
     try {
@@ -617,6 +623,8 @@ export function TripDashboard() {
       const data = await res.json();
       setActivityForm(emptyActivityForm);
       setEditingActivityId(null);
+      setIsHotelActivity(false);
+      setHotelStayNights(1);
       setTrips((prev) =>
         prev.map((trip) =>
           trip.id === selectedTrip.id
@@ -683,6 +691,7 @@ export function TripDashboard() {
 
   function handleEditActivity(activity: Activity) {
     setEditingActivityId(activity.id);
+    const hotelMeta = getHotelMetadata(activity);
     setActivityForm({
       title: activity.title,
       startTime: activity.startTime ? formatTime(activity.startTime) : "",
@@ -691,11 +700,15 @@ export function TripDashboard() {
       location: activity.location || "",
       startLocation: activity.startLocation || "",
     });
+    setIsHotelActivity(Boolean(hotelMeta));
+    setHotelStayNights(hotelMeta?.nights && hotelMeta.nights > 0 ? hotelMeta.nights : 1);
   }
 
   function cancelActivityEdit() {
     setEditingActivityId(null);
     setActivityForm(emptyActivityForm);
+    setIsHotelActivity(false);
+    setHotelStayNights(1);
   }
 
   const filteredHotels = useMemo(
@@ -1823,7 +1836,7 @@ export function TripDashboard() {
                           </ul>
                         )}
                       </div>
-                     <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-3 sm:grid-cols-2">
                           <div>
                             <label className="text-xs text-fuchsia-500" htmlFor="startTime">
                               Start
@@ -1850,6 +1863,31 @@ export function TripDashboard() {
                             />
                           </div>
                         </div>
+                      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white/60 px-3 py-2">
+                        <label className="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                          <input
+                            type="checkbox"
+                            checked={isHotelActivity}
+                            onChange={(event) => setIsHotelActivity(event.target.checked)}
+                            className="h-4 w-4 rounded border-[#f5d9ff] text-fuchsia-500 focus:ring-0"
+                          />
+                          This is a hotel stay
+                        </label>
+                        {isHotelActivity && (
+                          <div className="flex items-center gap-2 text-xs text-slate-700">
+                            <span>Nights</span>
+                            <input
+                              type="number"
+                              min={1}
+                              value={hotelStayNights}
+                              onChange={(event) =>
+                                setHotelStayNights(Math.max(1, Number(event.target.value) || 1))
+                              }
+                              className="w-20 rounded-lg border border-[#f5d9ff] bg-white px-2 py-1 text-sm text-slate-900"
+                            />
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <textarea
                           placeholder="Optional notes"
