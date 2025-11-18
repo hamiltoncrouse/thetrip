@@ -12,6 +12,8 @@ const createActivitySchema = z.object({
   notes: z.string().optional(),
   location: z.string().optional(),
   startLocation: z.string().optional(),
+  type: z.string().min(1).optional(),
+  metadata: z.record(z.any()).optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -96,6 +98,9 @@ export async function POST(
         travelPolyline: travel?.polyline ?? null,
         startTime,
         endTime,
+        type: parsed.data.type || null,
+        source: parsed.data.type === "hotel" ? "hotel" : undefined,
+        metadata: parsed.data.metadata || null,
       },
     });
 

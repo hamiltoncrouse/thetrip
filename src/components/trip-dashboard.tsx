@@ -19,6 +19,22 @@ type Activity = {
   travelDurationSeconds?: number | null;
   travelSummary?: string | null;
   travelPolyline?: string | null;
+  type?: string | null;
+  metadata?: Record<string, unknown> | null;
+  source?: string | null;
+};
+
+type HotelActivityMetadata = {
+  kind?: string;
+  hotelId?: string;
+  nights?: number;
+  price?: number;
+  currency?: string;
+  distanceKm?: number;
+  reviewScore?: number;
+  offer?: string;
+  address?: string;
+  description?: string;
 };
 
 type TripDay = {
@@ -126,6 +142,27 @@ const formatTimeRange = (activity: Activity) => {
   return end ? `${start} – ${end}` : start;
 };
 
+const getHotelMetadata = (activity: Activity): HotelActivityMetadata | null => {
+  if (activity.type !== "hotel") return null;
+  const meta = (activity.metadata || {}) as Record<string, unknown>;
+  const nights = typeof meta.nights === "number" && meta.nights > 0 ? meta.nights : undefined;
+  const price = typeof meta.price === "number" ? meta.price : undefined;
+  const distanceKm = typeof meta.distanceKm === "number" ? meta.distanceKm : undefined;
+  const reviewScore = typeof meta.reviewScore === "number" ? meta.reviewScore : undefined;
+  return {
+    kind: typeof meta.kind === "string" ? meta.kind : undefined,
+    hotelId: typeof meta.hotelId === "string" ? meta.hotelId : undefined,
+    nights,
+    price,
+    currency: typeof meta.currency === "string" ? meta.currency : undefined,
+    distanceKm,
+    reviewScore,
+    offer: typeof meta.offer === "string" ? meta.offer : undefined,
+    address: typeof meta.address === "string" ? meta.address : undefined,
+    description: typeof meta.description === "string" ? meta.description : undefined,
+  };
+};
+
 export function TripDashboard() {
   const { status, user, idToken, firebaseConfigured, signInWithGoogle, signOut, error } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -153,6 +190,9 @@ export function TripDashboard() {
   const [hotelPage, setHotelPage] = useState(1);
   const [hasMoreHotels, setHasMoreHotels] = useState(true);
   const [hotelSort, setHotelSort] = useState<"price" | "rating" | "distance" | "none">("none");
+  const [hotelNights, setHotelNights] = useState(1);
+  const [addingHotelId, setAddingHotelId] = useState<string | null>(null);
+  const [hotelPlanError, setHotelPlanError] = useState<string | null>(null);
   const [shareEmail, setShareEmail] = useState("");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [titleSuggestEnabled, setTitleSuggestEnabled] = useState(false);
@@ -255,8 +295,11 @@ export function TripDashboard() {
       const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
       return aTime - bTime;
     });
+  const hotelActivities = orderedActivities.filter((activity) => activity.type === "hotel");
   const calendarDay = selectedTrip?.days.find((day) => day.id === calendarDayId) || null;
   const calendarEvent = calendarDay?.activities?.find((activity) => activity.id === calendarEventId) || null;
+  const calendarHotels = calendarDay?.activities?.filter((activity) => activity.type === "hotel") || [];
+  const calendarEventHotel = calendarEvent ? getHotelMetadata(calendarEvent) : null;
 
   const dayByDateKey = useMemo(() => {
     const map: Record<string, TripDay> = {};
@@ -742,6 +785,71 @@ export function TripDashboard() {
       if (!append) setHotelResults([]);
     } finally {
       setHotelLoading(false);
+    }
+  }
+
+  async function addHotelToPlan(hotel: HotelOption) {
+    if (!selectedTrip || !selectedDay) return;
+    if (!jsonHeaders) {
+      setTripError("Sign in to save a hotel stay.");
+      return;
+    }
+    if (!hotelNights || hotelNights < 1) {
+      setHotelPlanError("Please choose at least one night.");
+      return;
+    }
+
+    setHotelPlanError(null);
+    setAddingHotelId(hotel.id);
+    try {
+      const res = await fetch(`/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          title: `${hotel.name} stay`,
+          startTime: "15:00",
+          endTime: "22:00",
+          notes: hotel.description || undefined,
+          location: hotel.address || selectedDay.city,
+          type: "hotel",
+          metadata: {
+            kind: "hotel",
+            hotelId: hotel.id,
+            nights: hotelNights,
+            price: hotel.price,
+            currency: hotel.currency,
+            distanceKm: hotel.distanceKm,
+            reviewScore: hotel.reviewScore,
+            offer: hotel.offer,
+            address: hotel.address,
+            description: hotel.description,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to save hotel (${res.status})`);
+      }
+      const data = await res.json();
+      setTrips((prev) =>
+        prev.map((trip) =>
+          trip.id === selectedTrip.id
+            ? {
+                ...trip,
+                days: trip.days.map((day) =>
+                  day.id === selectedDay.id
+                    ? { ...day, activities: [...(day.activities || []), data.activity] }
+                    : day,
+                ),
+              }
+            : trip,
+        ),
+      );
+      setCalendarEventId(data.activity.id);
+    } catch (error) {
+      setHotelPlanError(error instanceof Error ? error.message : "Could not save hotel stay.");
+    } finally {
+      setAddingHotelId(null);
     }
   }
 
@@ -1320,6 +1428,32 @@ export function TripDashboard() {
                           <p className="mt-2 text-sm text-slate-600">{calendarDay.notes}</p>
                         )}
                       </div>
+                      {calendarHotels.length > 0 && (
+                        <div className="space-y-2 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
+                          <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Hotel stays</p>
+                          <ul className="space-y-1 text-sm text-slate-800">
+                            {calendarHotels.map((activity) => {
+                              const meta = getHotelMetadata(activity);
+                              return (
+                                <li key={activity.id} className="flex items-center justify-between gap-2">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{activity.title}</p>
+                                    <p className="text-xs text-slate-600">{formatTimeRange(activity)}</p>
+                                    {meta?.nights && (
+                                      <p className="text-xs text-slate-600">{meta.nights} night{meta.nights === 1 ? "" : "s"}</p>
+                                    )}
+                                  </div>
+                                  {meta?.price && meta?.currency && (
+                                    <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-[11px] text-slate-800">
+                                      {meta.price.toFixed(0)} {meta.currency}
+                                    </span>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         {(calendarDay.activities || []).length ? (
                           calendarDay.activities?.map((activity) => (
@@ -1356,6 +1490,31 @@ export function TripDashboard() {
                             <h4 className="text-lg font-semibold text-slate-900">{calendarEvent.title}</h4>
                             <p className="text-sm text-slate-600">{formatTimeRange(calendarEvent)}</p>
                           </div>
+                          {calendarEventHotel && (
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+                              <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-[11px] uppercase tracking-[0.25em] text-slate-800">
+                                Hotel
+                              </span>
+                              {calendarEventHotel.nights && (
+                                <span>{calendarEventHotel.nights} night{calendarEventHotel.nights === 1 ? "" : "s"}</span>
+                              )}
+                              {calendarEventHotel.price && calendarEventHotel.currency && (
+                                <span className="font-semibold text-slate-900">
+                                  {calendarEventHotel.price.toFixed(0)} {calendarEventHotel.currency}
+                                </span>
+                              )}
+                              {calendarEventHotel.offer && (
+                                <a
+                                  href={calendarEventHotel.offer}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-sky-600 underline hover:text-sky-800"
+                                >
+                                  View offer
+                                </a>
+                              )}
+                            </div>
+                          )}
                           {calendarEvent.description && (
                             <p className="text-sm text-slate-700">{calendarEvent.description}</p>
                           )}
@@ -1533,67 +1692,80 @@ export function TripDashboard() {
                         <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Trip editor</p>
                         {orderedActivities.length ? (
                           <ol className="space-y-2">
-                            {orderedActivities.map((activity) => (
-                              <li
-                                key={activity.id}
-                                className="rounded-2xl border border-[#f5d9ff] bg-white/70 px-4 py-2"
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <div>
-                                  <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
-                                  <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
-                                    {formatTimeRange(activity)}
-                                  </p>
-                                  {activity.description && (
-                                    <p className="text-xs text-slate-600">{activity.description}</p>
-                                  )}
-                                  {activity.location && (
-                                    <p className="text-xs text-slate-600">
-                                      {activity.location}
-                                    </p>
-                                  )}
-                                  {activity.startLocation && (
-                                    <p className="text-xs text-slate-500">
-                                      Starts at {activity.startLocation}
-                                    </p>
-                                  )}
-                                  {activity.travelSummary && (
-                                    <p className="text-xs text-emerald-600">
-                                      {activity.travelSummary}
-                                    </p>
-                                  )}
-                                  {activity.startLocation && activity.location && (
-                                    <a
-                                      href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
-                                        activity.startLocation,
-                                      )}&destination=${encodeURIComponent(activity.location)}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-xs text-sky-600 underline hover:text-sky-800"
-                                    >
-                                      Open route in Google Maps
-                                    </a>
-                                  )}
-                                </div>
-                                  <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-600">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditActivity(activity)}
-                                      className="rounded-full border border-[#ebaef5] px-2 py-0.5 hover:border-[#d77dff]"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteActivity(activity.id)}
-                                      className="rounded-full border border-[#ebaef5] px-2 py-0.5 text-rose-500 hover:border-rose-200"
-                                    >
-                                      Remove
-                                    </button>
+                            {orderedActivities.map((activity) => {
+                              const hotelMeta = getHotelMetadata(activity);
+                              return (
+                                <li
+                                  key={activity.id}
+                                  className="rounded-2xl border border-[#f5d9ff] bg-white/70 px-4 py-2"
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
+                                        {hotelMeta && (
+                                          <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-[10px] uppercase tracking-[0.25em] text-slate-800">
+                                            Hotel
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
+                                        {formatTimeRange(activity)}
+                                      </p>
+                                      {hotelMeta?.nights && (
+                                        <p className="text-xs text-slate-600">{hotelMeta.nights} night{hotelMeta.nights === 1 ? "" : "s"}</p>
+                                      )}
+                                      {activity.description && (
+                                        <p className="text-xs text-slate-600">{activity.description}</p>
+                                      )}
+                                      {activity.location && (
+                                        <p className="text-xs text-slate-600">
+                                          {activity.location}
+                                        </p>
+                                      )}
+                                      {activity.startLocation && (
+                                        <p className="text-xs text-slate-500">
+                                          Starts at {activity.startLocation}
+                                        </p>
+                                      )}
+                                      {activity.travelSummary && (
+                                        <p className="text-xs text-emerald-600">
+                                          {activity.travelSummary}
+                                        </p>
+                                      )}
+                                      {activity.startLocation && activity.location && (
+                                        <a
+                                          href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+                                            activity.startLocation,
+                                          )}&destination=${encodeURIComponent(activity.location)}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-xs text-sky-600 underline hover:text-sky-800"
+                                        >
+                                          Open route in Google Maps
+                                        </a>
+                                      )}
+                                    </div>
+                                    <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-600">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditActivity(activity)}
+                                        className="rounded-full border border-[#ebaef5] px-2 py-0.5 hover:border-[#d77dff]"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteActivity(activity.id)}
+                                        className="rounded-full border border-[#ebaef5] px-2 py-0.5 text-rose-500 hover:border-rose-200"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                              </li>
-                            ))}
+                                </li>
+                              );
+                            })}
                           </ol>
                         ) : (
                           <p className="text-sm text-slate-600">No scheduled items yet.</p>
@@ -1736,6 +1908,52 @@ export function TripDashboard() {
                       </form>
                     </div>
 
+                    {hotelActivities.length > 0 && (
+                      <div className="space-y-2 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
+                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Hotel stays</p>
+                        <ul className="space-y-2 text-sm text-slate-800">
+                          {hotelActivities.map((activity) => {
+                            const meta = getHotelMetadata(activity);
+                            return (
+                              <li key={activity.id} className="rounded-xl border border-[#f1c0ff] bg-white/80 px-3 py-2 shadow-sm">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{activity.title}</p>
+                                    <p className="text-xs uppercase tracking-[0.3em] text-fuchsia-500">
+                                      {formatTimeRange(activity)}
+                                    </p>
+                                    {meta?.nights && (
+                                      <p className="text-xs text-slate-600">{meta.nights} night{meta.nights === 1 ? "" : "s"}</p>
+                                    )}
+                                    {activity.location && (
+                                      <p className="text-xs text-slate-600">{activity.location}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1 text-[11px] uppercase tracking-[0.2em] text-slate-600">
+                                    {meta?.price && meta?.currency && (
+                                      <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-slate-800">
+                                        {meta.price.toFixed(0)} {meta.currency}
+                                      </span>
+                                    )}
+                                    {meta?.offer && (
+                                      <a
+                                        href={meta.offer}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="rounded-full border border-[#ebaef5] px-2 py-0.5 text-slate-900 hover:border-[#d77dff]"
+                                      >
+                                        View
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+
                     {selectedDayPlace && (
                       <div className="space-y-2 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
                         <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">City map</p>
@@ -1799,9 +2017,22 @@ export function TripDashboard() {
                           </button>
                         </div>
                         {hotelError && <p className="text-xs text-rose-500">{hotelError}</p>}
+                        {hotelPlanError && <p className="text-xs text-rose-500">{hotelPlanError}</p>}
                         {hotelResults.length > 0 ? (
                           <>
-                            <div className="grid gap-2 text-xs text-slate-600 sm:grid-cols-3">
+                            <div className="grid gap-2 text-xs text-slate-600 sm:grid-cols-4">
+                              <label className="flex flex-col gap-1">
+                                <span>Nights</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={hotelNights}
+                                  onChange={(event) =>
+                                    setHotelNights(Math.max(1, Number(event.target.value) || 1))
+                                  }
+                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
+                                />
+                              </label>
                               <label className="flex flex-col gap-1">
                                 <span>Min rating</span>
                                 <select
@@ -1902,6 +2133,20 @@ export function TripDashboard() {
                                   {hotel.description && (
                                     <p className="mt-1 text-xs text-slate-600">{hotel.description}</p>
                                   )}
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+                                    <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-800">
+                                      Hotel stay
+                                    </span>
+                                    <span>{hotelNights} night{hotelNights === 1 ? "" : "s"}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => addHotelToPlan(hotel)}
+                                      disabled={addingHotelId === hotel.id || hotelLoading}
+                                      className="rounded-full border border-[#ebaef5] px-3 py-1 font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                      {addingHotelId === hotel.id ? "Adding..." : "Add to plan"}
+                                    </button>
+                                  </div>
                                 </div>
                               </li>
                             ))}
