@@ -1060,7 +1060,7 @@ export function TripDashboard() {
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 pb-4">
         <div className="flex items-center gap-4">
-          <div className="rounded-full border-4 border-white bg-white shadow-md">
+          <div className="rounded-full border-4 border-dayglo-void bg-white shadow-hard">
             <Image
               src="/fonda.png"
               alt="Fonda avatar"
@@ -1071,30 +1071,30 @@ export function TripDashboard() {
             />
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Fonda</p>
-            <h2 className="text-xl font-semibold text-slate-900">Travel consultant</h2>
+            <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Fonda</p>
+            <h2 className="text-xl font-black text-dayglo-void">Travel consultant</h2>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {chatLoading && <span className="text-xs text-slate-600">thinking...</span>}
+          {chatLoading && <span className="text-xs font-black text-dayglo-void">thinking...</span>}
           <button
             type="button"
             onClick={() => setChatExpanded((prev) => !prev)}
-            className="hidden rounded-full border border-[#f1c0ff] px-3 py-1 text-xs text-slate-900 transition hover:border-[#d77dff] lg:inline-flex"
+            className="hidden rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none lg:inline-flex"
           >
             {chatExpanded ? "Compact" : "Expand"}
           </button>
           <button
             type="button"
             onClick={() => setIsChatOpen(false)}
-            className="rounded-full border border-[#f1c0ff] px-3 py-1 text-xs text-slate-900 transition hover:border-[#d77dff] lg:hidden"
+            className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none lg:hidden"
           >
             Close
           </button>
         </div>
       </div>
       <div
-        className="flex-1 overflow-y-auto rounded-2xl border border-[#f5d9ff] bg-white/70 p-4 text-sm"
+        className="flex-1 overflow-y-auto rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/30 p-4 text-sm shadow-hard"
         style={{ minHeight: "320px" }}
         role="log"
         aria-live="polite"
@@ -1104,10 +1104,10 @@ export function TripDashboard() {
           {chatMessages.map((message) => (
             <div
               key={message.id}
-              className={`max-w-full rounded-2xl px-4 py-2 ${
+              className={`max-w-full rounded-md px-4 py-2 ${
                 message.role === "assistant"
-                  ? "bg-white/90 text-slate-900 self-start"
-                  : "bg-[#ffe6ff] text-slate-900 self-end"
+                  ? "self-start border-2 border-dayglo-void bg-white text-dayglo-void shadow-hard-sm"
+                  : "self-end border-2 border-dayglo-void bg-dayglo-void text-white shadow-hard-sm"
               }`}
             >
               {message.text}
@@ -1120,7 +1120,7 @@ export function TripDashboard() {
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           disabled={!isAuthenticated}
-          className="w-full rounded-2xl border border-[#f5d9ff] bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff] disabled:opacity-50"
+          className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard disabled:opacity-50"
           rows={3}
           placeholder={
             isAuthenticated
@@ -1131,7 +1131,7 @@ export function TripDashboard() {
         <button
           type="submit"
           disabled={!isAuthenticated || chatLoading || !chatInput.trim()}
-          className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-lime py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
         >
           Send to Fonda
         </button>
@@ -1144,23 +1144,23 @@ export function TripDashboard() {
     : "lg:grid-cols-[minmax(0,1fr),360px]";
 
   return (
-    <div className="dayglow-page min-h-screen text-slate-900">
-      <header className="border-b border-[#f5d9ff] bg-white/70 backdrop-blur">
+    <div className="min-h-screen bg-paper text-dayglo-void">
+      <header className="border-b-2 border-dayglo-void bg-dayglo-yellow/40 shadow-hard">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">{clientEnv.NEXT_PUBLIC_APP_NAME}</p>
-            <h1 className="text-2xl font-semibold text-slate-900">The Trip Dashboard</h1>
+            <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">{clientEnv.NEXT_PUBLIC_APP_NAME}</p>
+            <h1 className="text-3xl font-black text-dayglo-void">The Trip Dashboard</h1>
           </div>
           <div className="flex items-center gap-3">
             {isAuthenticated && user ? (
               <>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-slate-900">{user.displayName || "Signed in"}</p>
-                  <p className="text-xs text-slate-500">{user.email}</p>
+                  <p className="text-sm font-black text-dayglo-void">{user.displayName || "Signed in"}</p>
+                  <p className="text-xs text-dayglo-void/70">{user.email}</p>
                 </div>
                 <button
                   onClick={() => signOut()}
-                  className="rounded-full border border-[#f1c0ff] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
+                  className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                 >
                   Sign out
                 </button>
@@ -1169,7 +1169,7 @@ export function TripDashboard() {
               <button
                 onClick={() => signInWithGoogle().catch((err) => setTripError(err.message))}
                 disabled={!firebaseConfigured || status === "loading"}
-                className="psychedelic-button rounded-full px-5 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-5 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {firebaseConfigured ? "Sign in with Google" : "Configure Firebase"}
               </button>
@@ -1179,13 +1179,13 @@ export function TripDashboard() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl space-y-6 px-6 py-10">
-        <section className="space-y-5 rounded-2xl border border-[#f5d9ff] bg-white/80 p-6">
+        <section className="space-y-5 rounded-lg border-2 border-dayglo-void bg-paper p-6 shadow-hard">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">{headline}</p>
+              <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">{headline}</p>
               <div className="flex flex-wrap items-center gap-3">
                 <select
-                  className="min-w-[220px] rounded-2xl border border-[#f1c0ff] bg-white/80 px-4 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                  className="min-w-[220px] rounded-md border-2 border-dayglo-void bg-white px-4 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                   value={selectedTripId ?? ""}
                   onChange={(e) => {
                     const value = e.target.value || null;
@@ -1209,13 +1209,13 @@ export function TripDashboard() {
                       placeholder="Share with Gmail"
                       value={shareEmail}
                       onChange={(event) => setShareEmail(event.target.value)}
-                      className="rounded-full border border-[#f1c0ff] bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                      className="rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                     />
                     <button
                       type="button"
                       onClick={() => shareTripWithEmail()}
                       disabled={!shareEmail.trim() || !selectedTripId}
-                      className="rounded-full border border-[#ebaef5] px-3 py-2 text-sm font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Share trip
                     </button>
@@ -1225,7 +1225,7 @@ export function TripDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowTripForm((prev) => !prev)}
-                  className="rounded-full border border-[#ebaef5] px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-[#d77dff]"
+                  className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                 >
                   {showTripForm ? "Close form" : "New trip"}
                 </button>
@@ -1237,7 +1237,7 @@ export function TripDashboard() {
                         deleteTrip(selectedTrip.id);
                       }
                     }}
-                    className="rounded-full border border-[#f1c0ff] px-4 py-2 text-xs uppercase tracking-[0.3em] text-rose-500 transition hover:border-rose-200"
+                    className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                   >
                     Delete trip
                   </button>
@@ -1247,10 +1247,10 @@ export function TripDashboard() {
                   type="button"
                   title="Edit days, cities, and activities"
                   onClick={() => setView("timeline")}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  className={`rounded-md border-2 px-4 py-2 text-sm font-black uppercase tracking-[0.2em] transition ${
                     view === "timeline"
-                      ? "bg-white text-slate-900"
-                      : "border border-[#ebaef5] text-slate-900 hover:border-[#d77dff]"
+                      ? "bg-dayglo-lime border-dayglo-void text-dayglo-void shadow-hard"
+                      : "border-dayglo-void text-dayglo-void shadow-hard-sm hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
                   }`}
                 >
                   Edit trip
@@ -1259,10 +1259,10 @@ export function TripDashboard() {
                     type="button"
                     title="Visualize the trip on a calendar"
                     onClick={() => setView("calendar")}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    className={`rounded-md border-2 px-4 py-2 text-sm font-black uppercase tracking-[0.2em] transition ${
                       view === "calendar"
-                        ? "bg-white text-slate-900"
-                        : "border border-[#ebaef5] text-slate-900 hover:border-[#d77dff]"
+                        ? "bg-dayglo-lime border-dayglo-void text-dayglo-void shadow-hard"
+                        : "border-dayglo-void text-dayglo-void shadow-hard-sm hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
                     }`}
                   >
                     Calendar
@@ -1270,7 +1270,7 @@ export function TripDashboard() {
                   <button
                     type="button"
                     onClick={() => setIsChatOpen((prev) => !prev)}
-                    className="rounded-full border border-[#f1c0ff] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
+                    className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                   >
                     {isChatOpen ? "Hide Fonda" : "Open Fonda"}
                   </button>
@@ -1296,16 +1296,16 @@ export function TripDashboard() {
           </div>
 
           {selectedTrip && selectedTrip.days.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto rounded-full bg-white/80 px-3 py-2 text-xs">
+            <div className="flex gap-2 overflow-x-auto rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/30 px-3 py-2 text-xs shadow-hard">
               {selectedTrip.days.map((day) => (
                 <button
                   key={day.id}
                   type="button"
                   onClick={() => setSelectedDayId(day.id)}
-                  className={`rounded-full px-4 py-1 transition ${
+                  className={`rounded-md border-2 px-4 py-1 font-black uppercase tracking-[0.2em] transition ${
                     selectedDayId === day.id
-                      ? "bg-white text-slate-900"
-                      : "bg-transparent text-slate-700 hover:bg-white"
+                      ? "border-dayglo-void bg-white text-dayglo-void shadow-hard-sm"
+                      : "border-dayglo-void bg-paper text-dayglo-void shadow-hard-sm hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
                   }`}
                 >
                   {format(new Date(day.date), "MMM d")}
@@ -1315,9 +1315,9 @@ export function TripDashboard() {
           )}
 
           {showTripForm && (
-            <form className="grid gap-4 rounded-2xl border border-[#f5d9ff] bg-white/80 p-4" onSubmit={createTrip}>
+            <form className="grid gap-4 rounded-lg border-2 border-dayglo-void bg-paper p-4 shadow-hard" onSubmit={createTrip}>
               <div className="sm:col-span-2">
-                <label className="text-sm text-slate-600" htmlFor="title">
+                <label className="text-sm font-black text-dayglo-void" htmlFor="title">
                   Trip title
                 </label>
                 <input
@@ -1325,25 +1325,25 @@ export function TripDashboard() {
                   required
                   value={tripForm.title}
                   onChange={(e) => setTripForm((prev) => ({ ...prev, title: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                   placeholder="Neon Riviera"
                 />
               </div>
               <div>
-                <label className="text-sm text-slate-600" htmlFor="homeCity">
+                <label className="text-sm font-black text-dayglo-void" htmlFor="homeCity">
                   Base city
                 </label>
                 <input
                   id="homeCity"
                   value={tripForm.homeCity}
                   onChange={(e) => setTripForm((prev) => ({ ...prev, homeCity: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                   placeholder="Lisbon"
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm text-slate-600" htmlFor="startDate">
+                  <label className="text-sm font-black text-dayglo-void" htmlFor="startDate">
                     Start date
                   </label>
                   <input
@@ -1351,11 +1351,11 @@ export function TripDashboard() {
                     type="date"
                     value={tripForm.startDate}
                     onChange={(e) => setTripForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                    className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-600" htmlFor="endDate">
+                  <label className="text-sm font-black text-dayglo-void" htmlFor="endDate">
                     End date
                   </label>
                   <input
@@ -1363,19 +1363,19 @@ export function TripDashboard() {
                     type="date"
                     value={tripForm.endDate}
                     onChange={(e) => setTripForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                    className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                   />
                 </div>
               </div>
               <div className="sm:col-span-2">
-                <label className="text-sm text-slate-600" htmlFor="description">
+                <label className="text-sm font-black text-dayglo-void" htmlFor="description">
                   Notes / intent
                 </label>
                 <textarea
                   id="description"
                   value={tripForm.description}
                   onChange={(e) => setTripForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                   rows={3}
                   placeholder="Anniversary loop, mix rooftop bars with train rides"
                 />
@@ -1383,7 +1383,7 @@ export function TripDashboard() {
               <button
                 type="submit"
                 disabled={creatingTrip}
-                className="psychedelic-button w-full rounded-full py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60 sm:col-span-2"
+                className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-lime py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait disabled:opacity-60 sm:col-span-2"
               >
                 {creatingTrip ? "Creating..." : "Create trip"}
               </button>
@@ -1496,22 +1496,22 @@ export function TripDashboard() {
                         )}
                       </div>
                       {calendarHotels.length > 0 && (
-                        <div className="space-y-2 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
-                          <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Hotel stays</p>
-                          <ul className="space-y-1 text-sm text-slate-800">
+                        <div className="space-y-2 rounded-lg border-2 border-dayglo-void bg-paper p-3 shadow-hard">
+                          <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Hotel stays</p>
+                          <ul className="space-y-1 text-sm text-dayglo-void">
                             {calendarHotels.map((activity) => {
                               const meta = getHotelMetadata(activity);
                               return (
                                 <li key={activity.id} className="flex items-center justify-between gap-2">
                                   <div>
-                                    <p className="font-semibold text-slate-900">{activity.title}</p>
-                                    <p className="text-xs text-slate-600">{formatTimeRange(activity)}</p>
+                                    <p className="font-black text-dayglo-void">{activity.title}</p>
+                                    <p className="text-xs font-semibold text-dayglo-void">{formatTimeRange(activity)}</p>
                                     {meta?.nights && (
-                                      <p className="text-xs text-slate-600">{meta.nights} night{meta.nights === 1 ? "" : "s"}</p>
+                                      <p className="text-xs font-semibold text-dayglo-void">{meta.nights} night{meta.nights === 1 ? "" : "s"}</p>
                                     )}
                                   </div>
                                   {meta?.price && meta?.currency && (
-                                    <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-[11px] text-slate-800">
+                                    <span className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-2 py-0.5 text-[11px] font-black text-dayglo-void shadow-hard-sm">
                                       {meta.price.toFixed(0)} {meta.currency}
                                     </span>
                                   )}
@@ -1703,7 +1703,7 @@ export function TripDashboard() {
                           autoComplete="off"
                           value={cityQuery}
                           onChange={(e) => handleCityInputChange(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/70 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                         />
                         {(citySuggestionsLoading || cityDetailsLoading) && (
                           <span className="absolute right-3 top-[30px] text-xs text-slate-500">
@@ -1741,14 +1741,14 @@ export function TripDashboard() {
                           rows={3}
                           value={dayForm.notes}
                           onChange={(e) => setDayForm((prev) => ({ ...prev, notes: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/70 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                           placeholder="Morning wander, afternoon train, late dinner"
                         />
                       </div>
                       <button
                         type="submit"
                         disabled={savingDay}
-                        className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
+                        className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait disabled:opacity-60"
                       >
                         {savingDay ? "Saving..." : "Save day"}
                       </button>
@@ -1756,7 +1756,7 @@ export function TripDashboard() {
 
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Trip editor</p>
+                        <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Trip editor</p>
                         {orderedActivities.length ? (
                           <ol className="space-y-2">
                             {orderedActivities.map((activity) => {
@@ -1764,41 +1764,35 @@ export function TripDashboard() {
                               return (
                                 <li
                                   key={activity.id}
-                                  className="rounded-2xl border border-[#f5d9ff] bg-white/70 px-4 py-2"
+                                  className="rounded-lg border-2 border-dayglo-void bg-white px-4 py-3 shadow-hard transition hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
                                 >
                                   <div className="flex items-center justify-between gap-3">
-                                    <div>
+                                    <div className="space-y-1">
                                       <div className="flex items-center gap-2">
-                                        <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
+                                        <p className="text-base font-black text-dayglo-void">{activity.title}</p>
                                         {hotelMeta && (
-                                          <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-[10px] uppercase tracking-[0.25em] text-slate-800">
+                                          <span className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.25em] text-dayglo-void shadow-hard-sm">
                                             Hotel
                                           </span>
                                         )}
                                       </div>
-                                      <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
+                                      <span className="inline-flex items-center gap-1 rounded-md border-2 border-dayglo-void bg-dayglo-pink px-2 py-0.5 text-[11px] font-black uppercase tracking-[0.3em] text-dayglo-void shadow-hard-sm">
                                         {formatTimeRange(activity)}
-                                      </p>
+                                      </span>
                                       {hotelMeta?.nights && (
-                                        <p className="text-xs text-slate-600">{hotelMeta.nights} night{hotelMeta.nights === 1 ? "" : "s"}</p>
+                                        <p className="text-xs font-semibold text-dayglo-void">{hotelMeta.nights} night{hotelMeta.nights === 1 ? "" : "s"}</p>
                                       )}
                                       {activity.description && (
-                                        <p className="text-xs text-slate-600">{activity.description}</p>
+                                        <p className="text-xs text-dayglo-void">{activity.description}</p>
                                       )}
                                       {activity.location && (
-                                        <p className="text-xs text-slate-600">
-                                          {activity.location}
-                                        </p>
+                                        <p className="text-xs text-dayglo-void">{activity.location}</p>
                                       )}
                                       {activity.startLocation && (
-                                        <p className="text-xs text-slate-500">
-                                          Starts at {activity.startLocation}
-                                        </p>
+                                        <p className="text-xs text-dayglo-void/70">Starts at {activity.startLocation}</p>
                                       )}
                                       {activity.travelSummary && (
-                                        <p className="text-xs text-emerald-600">
-                                          {activity.travelSummary}
-                                        </p>
+                                        <p className="text-xs font-semibold text-dayglo-lime">{activity.travelSummary}</p>
                                       )}
                                       {activity.startLocation && activity.location && (
                                         <a
@@ -1807,24 +1801,24 @@ export function TripDashboard() {
                                           )}&destination=${encodeURIComponent(activity.location)}`}
                                           target="_blank"
                                           rel="noreferrer"
-                                          className="text-xs text-sky-600 underline hover:text-sky-800"
+                                          className="text-xs font-black text-dayglo-cyan underline hover:text-dayglo-pink"
                                         >
                                           Open route in Google Maps
                                         </a>
                                       )}
                                     </div>
-                                    <div className="flex gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-600">
+                                    <div className="flex gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void">
                                       <button
                                         type="button"
                                         onClick={() => handleEditActivity(activity)}
-                                        className="rounded-full border border-[#ebaef5] px-2 py-0.5 hover:border-[#d77dff]"
+                                        className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-2 py-1 shadow-hard-sm transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                                       >
                                         Edit
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => deleteActivity(activity.id)}
-                                        className="rounded-full border border-[#ebaef5] px-2 py-0.5 text-rose-500 hover:border-rose-200"
+                                        className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-2 py-1 text-dayglo-void shadow-hard-sm transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                                       >
                                         Remove
                                       </button>
@@ -1861,7 +1855,7 @@ export function TripDashboard() {
                           required
                           value={activityForm.title}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/85 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                           placeholder="Midnight rooftop bar"
                           autoComplete="off"
                         />
@@ -1901,7 +1895,7 @@ export function TripDashboard() {
                               required
                               value={activityForm.startTime}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, startTime: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-[#ebaef5] bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-500 focus:border-[#cf6dff]"
+                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                         />
                           </div>
                           <div>
@@ -1913,7 +1907,7 @@ export function TripDashboard() {
                               type="time"
                               value={activityForm.endTime}
                               onChange={(e) => setActivityForm((prev) => ({ ...prev, endTime: e.target.value }))}
-                              className="mt-1 w-full rounded-xl border border-[#ebaef5] bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-500 focus:border-[#cf6dff]"
+                              className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                             />
                           </div>
                         </div>
@@ -1947,7 +1941,7 @@ export function TripDashboard() {
                           placeholder="Optional notes"
                           value={activityForm.notes}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/85 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                           rows={2}
                         />
                       </div>
@@ -1959,7 +1953,7 @@ export function TripDashboard() {
                           id="activityLocation"
                           value={activityForm.location}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, location: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                           placeholder="123 Rue Oberkampf, Paris"
                         />
                       </div>
@@ -1971,7 +1965,7 @@ export function TripDashboard() {
                           id="activityStartLocation"
                           value={activityForm.startLocation}
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, startLocation: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-[#f5d9ff] bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#cb82ff]"
+                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                           placeholder="Hotel de Ville"
                         />
                       </div>
@@ -1979,7 +1973,7 @@ export function TripDashboard() {
                           <button
                             type="submit"
                             disabled={savingActivity}
-                            className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
+                            className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait disabled:opacity-60"
                           >
                             {savingActivity
                               ? "Saving..."
@@ -1991,7 +1985,7 @@ export function TripDashboard() {
                             <button
                               type="button"
                               onClick={cancelActivityEdit}
-                              className="rounded-full border border-[#ebaef5] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
+                              className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                             >
                               Cancel
                             </button>
@@ -2001,29 +1995,29 @@ export function TripDashboard() {
                     </div>
 
                     {hotelActivities.length > 0 && (
-                      <div className="space-y-2 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
-                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Hotel stays</p>
-                        <ul className="space-y-2 text-sm text-slate-800">
+                      <div className="space-y-2 rounded-lg border-2 border-dayglo-void bg-paper p-3 shadow-hard">
+                        <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Hotel stays</p>
+                        <ul className="space-y-2 text-sm text-dayglo-void">
                           {hotelActivities.map((activity) => {
                             const meta = getHotelMetadata(activity);
                             return (
-                              <li key={activity.id} className="rounded-xl border border-[#f1c0ff] bg-white/80 px-3 py-2 shadow-sm">
+                              <li key={activity.id} className="rounded-lg border-2 border-dayglo-void bg-white px-3 py-2 shadow-hard-sm">
                                 <div className="flex items-center justify-between gap-3">
                                   <div>
-                                    <p className="font-semibold text-slate-900">{activity.title}</p>
-                                    <p className="text-xs uppercase tracking-[0.3em] text-fuchsia-500">
+                                    <p className="font-black text-dayglo-void">{activity.title}</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">
                                       {formatTimeRange(activity)}
                                     </p>
                                     {meta?.nights && (
-                                      <p className="text-xs text-slate-600">{meta.nights} night{meta.nights === 1 ? "" : "s"}</p>
+                                      <p className="text-xs font-semibold text-dayglo-void">{meta.nights} night{meta.nights === 1 ? "" : "s"}</p>
                                     )}
                                     {activity.location && (
-                                      <p className="text-xs text-slate-600">{activity.location}</p>
+                                      <p className="text-xs text-dayglo-void">{activity.location}</p>
                                     )}
                                   </div>
-                                  <div className="flex flex-col items-end gap-1 text-[11px] uppercase tracking-[0.2em] text-slate-600">
+                                  <div className="flex flex-col items-end gap-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void">
                                     {meta?.price && meta?.currency && (
-                                      <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-slate-800">
+                                      <span className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-2 py-0.5 text-dayglo-void shadow-hard-sm">
                                         {meta.price.toFixed(0)} {meta.currency}
                                       </span>
                                     )}
@@ -2032,7 +2026,7 @@ export function TripDashboard() {
                                         href={meta.offer}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="rounded-full border border-[#ebaef5] px-2 py-0.5 text-slate-900 hover:border-[#d77dff]"
+                                        className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-2 py-0.5 text-dayglo-void shadow-hard-sm transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                                       >
                                         View
                                       </a>
@@ -2282,19 +2276,19 @@ export function TripDashboard() {
           <div className="hidden lg:block">
             {isChatOpen ? (
               <aside
-                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full flex-col rounded-2xl border border-[#f5d9ff] bg-white/80 p-6 ${
-                  chatExpanded ? "shadow-2xl" : "shadow-lg"
+                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-6 shadow-hard ${
+                  chatExpanded ? "" : ""
                 }`}
               >
                 {chatPanelContent}
               </aside>
             ) : (
-              <aside className="sticky top-8 flex h-[calc(100vh-6rem)] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-[#f1c0ff] bg-white/80 p-6 text-center text-slate-600">
-                <p className="text-sm">Need ideas or timing help?</p>
+              <aside className="sticky top-8 flex h-[calc(100vh-6rem)] flex-col items-center justify-center gap-4 rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/60 p-6 text-center text-dayglo-void shadow-hard">
+                <p className="text-sm font-black uppercase tracking-[0.2em]">Need ideas or timing help?</p>
                 <button
                   type="button"
                   onClick={() => setIsChatOpen(true)}
-                  className="psychedelic-button rounded-full px-4 py-2 text-sm font-semibold"
+                  className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                 >
                   Chat with Fonda
                 </button>
