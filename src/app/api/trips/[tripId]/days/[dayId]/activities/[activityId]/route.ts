@@ -85,7 +85,7 @@ export async function PATCH(
     if (parsed.data.location !== undefined) updates.location = parsed.data.location || null;
     if (parsed.data.startLocation !== undefined) updates.startLocation = parsed.data.startLocation || null;
     if (parsed.data.type !== undefined) updates.type = parsed.data.type || null;
-    if (parsed.data.metadata !== undefined) updates.metadata = parsed.data.metadata || null;
+    if (parsed.data.metadata !== undefined) updates.metadata = parsed.data.metadata ?? undefined;
 
     if (parsed.data.startTime) {
       const value = combineDateWithTime(existing.tripDay.date, parsed.data.startTime);

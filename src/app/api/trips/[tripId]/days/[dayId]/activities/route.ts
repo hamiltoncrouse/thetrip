@@ -100,7 +100,7 @@ export async function POST(
         endTime,
         type: parsed.data.type || null,
         source: parsed.data.type === "hotel" ? "hotel" : undefined,
-        metadata: parsed.data.metadata || null,
+        metadata: parsed.data.metadata ?? undefined,
       },
     });
 
