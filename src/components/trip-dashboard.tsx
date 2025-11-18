@@ -1392,13 +1392,13 @@ export function TripDashboard() {
         </section>
 
         {view === "calendar" ? (
-          <section className="space-y-4 rounded-2xl border border-[#f5d9ff] bg-white/80 p-6">
+          <section className="space-y-4 rounded-lg border-2 border-dayglo-void bg-paper p-6 shadow-hard">
             {selectedTrip ? (
               <div className="space-y-6">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Trip calendar</p>
-                  <h2 className="text-2xl font-semibold text-slate-900">{selectedTrip.title}</h2>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Trip calendar</p>
+                  <h2 className="text-2xl font-black text-dayglo-void">{selectedTrip.title}</h2>
+                  <p className="text-sm font-semibold text-dayglo-void">
                     {selectedTrip.startDate
                       ? `${format(new Date(selectedTrip.startDate), "MMM d")} – ${
                           selectedTrip.endDate
@@ -1409,7 +1409,7 @@ export function TripDashboard() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="grid grid-cols-7 text-xs uppercase tracking-[0.4em] text-fuchsia-500">
+                  <div className="grid grid-cols-7 text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">
                     {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label) => (
                       <div key={label} className="text-center">
                         {label}
@@ -1433,22 +1433,22 @@ export function TripDashboard() {
                                 setCalendarDayId(tripDay.id);
                                 setCalendarEventId(tripDay.activities?.[0]?.id ?? null);
                               }}
-                              className={`h-28 rounded-2xl border px-2 py-2 text-left text-xs transition ${
+                              className={`h-28 rounded-lg border-2 px-2 py-2 text-left text-xs font-semibold transition shadow-hard-sm ${
                                 tripDay
                                   ? isSelected
-                                    ? "border-[#e8b7ff] bg-white"
-                                    : "border-[#f5d9ff] bg-white/80 hover:border-[#d77dff]"
-                                  : "border-[#f9e9ff] bg-transparent text-fuchsia-500"
+                                    ? "border-dayglo-void bg-white"
+                                    : "border-dayglo-void bg-paper hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
+                                  : "border-dayglo-void bg-dayglo-yellow/30 text-dayglo-void"
                               } ${tripDay ? "cursor-pointer" : "cursor-default"}`}
                             >
                               <div className="flex items-center justify-between text-slate-500">
-                                <span className="text-sm font-semibold text-slate-900">
+                                <span className="text-sm font-black text-dayglo-void">
                                   {dateValue.getDate()}
                                 </span>
-                                {tripDay && <span className="text-[10px] uppercase">{tripDay.city}</span>}
+                                {tripDay && <span className="text-[10px] font-black uppercase text-dayglo-pink">{tripDay.city}</span>}
                               </div>
                               {tripDay ? (
-                                <ul className="mt-2 space-y-1 text-[11px] text-slate-700">
+                                <ul className="mt-2 space-y-1 text-[11px] text-dayglo-void">
                                   {(tripDay.activities || []).slice(0, 2).map((activity) => (
                                     <li
                                       key={activity.id}
@@ -1459,20 +1459,20 @@ export function TripDashboard() {
                                         setCalendarEventId(activity.id);
                                       }}
                                     >
-                                      <span className="text-slate-500">
+                                      <span className="text-dayglo-void/60">
                                         {formatTime(activity.startTime)}
                                       </span>
-                                      <span className="text-slate-900">{activity.title}</span>
+                                      <span className="text-dayglo-void font-semibold">{activity.title}</span>
                                     </li>
                                   ))}
                                   {(tripDay.activities?.length || 0) > 2 && (
-                                    <li className="text-slate-500">
+                                    <li className="text-dayglo-void/70 font-semibold">
                                       + {(tripDay.activities?.length || 0) - 2} more
                                     </li>
                                   )}
                                 </ul>
                               ) : (
-                                <p className="mt-6 text-center text-slate-600">—</p>
+                                <p className="mt-6 text-center text-dayglo-void/60">—</p>
                               )}
                             </button>
                           );
@@ -1486,13 +1486,13 @@ export function TripDashboard() {
                   <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),320px]">
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Selected day</p>
-                        <h3 className="text-xl font-semibold text-slate-900">
+                        <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Selected day</p>
+                        <h3 className="text-xl font-black text-dayglo-void">
                           {format(new Date(calendarDay.date), "EEEE, MMMM d")}
                         </h3>
-                        <p className="text-sm text-slate-600">{calendarDay.city}</p>
+                        <p className="text-sm font-semibold text-dayglo-void">{calendarDay.city}</p>
                         {calendarDay.notes && (
-                          <p className="mt-2 text-sm text-slate-600">{calendarDay.notes}</p>
+                          <p className="mt-2 text-sm text-dayglo-void">{calendarDay.notes}</p>
                         )}
                       </div>
                       {calendarHotels.length > 0 && (
@@ -1528,45 +1528,45 @@ export function TripDashboard() {
                               key={activity.id}
                               type="button"
                               onClick={() => setCalendarEventId(activity.id)}
-                              className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                              className={`w-full rounded-lg border-2 px-4 py-3 text-left font-semibold transition ${
                                 activity.id === calendarEventId
-                                  ? "border-[#e8b7ff] bg-white"
-                                  : "border-[#f5d9ff] bg-white/70 hover:border-[#d77dff]"
+                                  ? "border-dayglo-void bg-white shadow-hard"
+                                  : "border-dayglo-void bg-paper shadow-hard-sm hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
                               }`}
                             >
-                              <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
-                              <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">
+                              <p className="text-sm font-black text-dayglo-void">{activity.title}</p>
+                              <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">
                                 {formatTimeRange(activity)}
                               </p>
                               {activity.location && (
-                                <p className="text-xs text-slate-600">{activity.location}</p>
+                                <p className="text-xs text-dayglo-void/80">{activity.location}</p>
                               )}
                             </button>
                           ))
                         ) : (
-                          <p className="text-sm text-slate-600">No activities scheduled.</p>
+                          <p className="text-sm font-semibold text-dayglo-void/70">No activities scheduled.</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="space-y-3 rounded-2xl border border-[#f5d9ff] bg-white/70 p-4">
+                    <div className="space-y-3 rounded-lg border-2 border-dayglo-void bg-paper p-4 shadow-hard">
                       {calendarEvent ? (
                         <>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Event detail</p>
-                            <h4 className="text-lg font-semibold text-slate-900">{calendarEvent.title}</h4>
-                            <p className="text-sm text-slate-600">{formatTimeRange(calendarEvent)}</p>
+                            <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Event detail</p>
+                            <h4 className="text-lg font-black text-dayglo-void">{calendarEvent.title}</h4>
+                            <p className="text-sm font-semibold text-dayglo-void/80">{formatTimeRange(calendarEvent)}</p>
                           </div>
                           {calendarEventHotel && (
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
-                              <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-[11px] uppercase tracking-[0.25em] text-slate-800">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-dayglo-void">
+                              <span className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-2 py-0.5 text-[11px] font-black uppercase tracking-[0.25em] text-dayglo-void shadow-hard-sm">
                                 Hotel
                               </span>
                               {calendarEventHotel.nights && (
-                                <span>{calendarEventHotel.nights} night{calendarEventHotel.nights === 1 ? "" : "s"}</span>
+                                <span className="font-semibold">{calendarEventHotel.nights} night{calendarEventHotel.nights === 1 ? "" : "s"}</span>
                               )}
                               {calendarEventHotel.price && calendarEventHotel.currency && (
-                                <span className="font-semibold text-slate-900">
+                                <span className="font-black text-dayglo-void">
                                   {calendarEventHotel.price.toFixed(0)} {calendarEventHotel.currency}
                                 </span>
                               )}
@@ -1575,7 +1575,7 @@ export function TripDashboard() {
                                   href={calendarEventHotel.offer}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-sky-600 underline hover:text-sky-800"
+                                  className="font-black text-dayglo-cyan underline hover:text-dayglo-pink"
                                 >
                                   View offer
                                 </a>
@@ -1583,22 +1583,22 @@ export function TripDashboard() {
                             </div>
                           )}
                           {calendarEvent.description && (
-                            <p className="text-sm text-slate-700">{calendarEvent.description}</p>
+                            <p className="text-sm text-dayglo-void">{calendarEvent.description}</p>
                           )}
                           {calendarEvent.location && (
-                            <p className="text-sm text-slate-700">
+                            <p className="text-sm text-dayglo-void">
                               Destination: {calendarEvent.location}
                             </p>
                           )}
                           {calendarEvent.startLocation && (
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-dayglo-void/80">
                               Starts at {calendarEvent.startLocation}
                             </p>
                           )}
                           {calendarEvent.travelSummary && (
-                            <p className="text-sm text-emerald-600">{calendarEvent.travelSummary}</p>
+                            <p className="text-sm font-semibold text-dayglo-lime">{calendarEvent.travelSummary}</p>
                           )}
-                          <div className="overflow-hidden rounded-xl border border-[#f5d9ff]">
+                          <div className="overflow-hidden rounded-xl border-2 border-dayglo-void shadow-hard-sm">
                             {calendarEvent.location ? (
                               <iframe
                                 title={`Map for ${calendarEvent.title}`}
@@ -1633,22 +1633,22 @@ export function TripDashboard() {
                               setSelectedDayId(calendarDay.id);
                               setView("timeline");
                             }}
-                            className="rounded-full border border-[#ebaef5] px-4 py-2 text-sm text-slate-900 transition hover:border-[#d77dff]"
+                            className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                           >
                             Open trip editor
                           </button>
                         </>
                         ) : (
-                          <p className="text-sm text-slate-600">Select an activity to see details.</p>
+                          <p className="text-sm font-semibold text-dayglo-void/70">Select an activity to see details.</p>
                         )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-600">Select a day to see details.</p>
+                  <p className="text-sm font-semibold text-dayglo-void/70">Select a day to see details.</p>
                 )}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-[#f5d9ff] p-10 text-center text-slate-500">
+              <div className="rounded-lg border-2 border-dashed border-dayglo-void bg-paper p-10 text-center text-dayglo-void/70 shadow-hard">
                 Select or create a trip to view its calendar.
               </div>
             )}
