@@ -608,44 +608,97 @@ export function TripDashboard() {
     };
 
     try {
-      const endpoint = editingActivityId
-        ? `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities/${editingActivityId}`
-        : `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`;
-      const res = await fetch(endpoint, {
-        method: editingActivityId ? "PATCH" : "POST",
-        headers: jsonHeaders,
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Failed to save activity (${res.status})`);
+      const daysSorted = [...selectedTrip.days].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+      );
+      const startIndex = daysSorted.findIndex((day) => day.id === selectedDay.id);
+
+      // If user marks multi-night hotel, create one activity per night across consecutive days.
+      if (isHotelActivity && hotelStayNights > 1 && !editingActivityId) {
+        if (startIndex === -1 || startIndex + hotelStayNights > daysSorted.length) {
+          setTripError("Trip does not have enough days for that many nights.");
+          return;
+        }
+
+        const created: Activity[] = [];
+        for (let index = 0; index < hotelStayNights; index += 1) {
+          const day = daysSorted[startIndex + index];
+          const res = await fetch(`/api/trips/${selectedTrip.id}/days/${day.id}/activities`, {
+            method: "POST",
+            headers: jsonHeaders,
+            body: JSON.stringify({
+              ...payload,
+              metadata: {
+                kind: "hotel",
+                nights: hotelStayNights,
+                night: index + 1,
+              },
+            }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body?.error || `Failed to save hotel stay (${res.status})`);
+          }
+          const data = await res.json();
+          created.push(data.activity as Activity);
+        }
+
+        setTrips((prev) =>
+          prev.map((trip) =>
+            trip.id === selectedTrip.id
+              ? {
+                  ...trip,
+                  days: trip.days.map((day) => {
+                    const newActivities = created.filter((item) => item.tripDayId === day.id);
+                    return newActivities.length
+                      ? { ...day, activities: [...(day.activities || []), ...newActivities] }
+                      : day;
+                  }),
+                }
+              : trip,
+          ),
+        );
+      } else {
+        const endpoint = editingActivityId
+          ? `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities/${editingActivityId}`
+          : `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`;
+        const res = await fetch(endpoint, {
+          method: editingActivityId ? "PATCH" : "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error || `Failed to save activity (${res.status})`);
+        }
+        const data = await res.json();
+        setTrips((prev) =>
+          prev.map((trip) =>
+            trip.id === selectedTrip.id
+              ? {
+                  ...trip,
+                  days: trip.days.map((day) =>
+                    day.id === selectedDay.id
+                      ? {
+                          ...day,
+                          activities: editingActivityId
+                            ? day.activities?.map((activity) =>
+                                activity.id === data.activity.id ? data.activity : activity,
+                              )
+                            : [...(day.activities || []), data.activity],
+                        }
+                      : day,
+                  ),
+                }
+              : trip,
+          ),
+        );
       }
-      const data = await res.json();
+
       setActivityForm(emptyActivityForm);
       setEditingActivityId(null);
       setIsHotelActivity(false);
       setHotelStayNights(1);
-      setTrips((prev) =>
-        prev.map((trip) =>
-          trip.id === selectedTrip.id
-            ? {
-                ...trip,
-                days: trip.days.map((day) =>
-                  day.id === selectedDay.id
-                    ? {
-                        ...day,
-                        activities: editingActivityId
-                          ? day.activities?.map((activity) =>
-                              activity.id === data.activity.id ? data.activity : activity,
-                            )
-                          : [...(day.activities || []), data.activity],
-                      }
-                    : day,
-                ),
-              }
-            : trip,
-        ),
-      );
     } catch (err) {
       setTripError(err instanceof Error ? err.message : "Failed to save activity");
     } finally {
