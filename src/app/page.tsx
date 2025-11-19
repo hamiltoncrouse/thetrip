@@ -69,6 +69,34 @@ export default function HomePage() {
 
   const headingTagline = useMemo(() => clientEnv.NEXT_PUBLIC_APP_NAME || "The Trip", []);
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-paper text-dayglo-void">
+        <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-8 px-6 py-20 text-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-dayglo-pink">{headingTagline}</p>
+            <h1 className="text-5xl font-black uppercase sm:text-7xl">
+              <span className="bg-gradient-to-r from-dayglo-pink via-dayglo-lime to-dayglo-orange bg-clip-text text-transparent">
+                THE TRIP
+              </span>
+            </h1>
+            <p className="text-lg font-black uppercase text-dayglo-void">Kill the spreadsheet.</p>
+            <p className="mx-auto mt-3 max-w-2xl text-base font-semibold uppercase text-dayglo-void/80 sm:text-lg">
+              Travel is a vibe, not a grid of cells. Sign in to unlock the planner.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => signInWithGoogle()}
+            className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-6 py-3 text-base font-black uppercase tracking-[0.25em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
+          >
+            Sign in with Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-paper text-dayglo-void">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-16">
@@ -84,23 +112,13 @@ export default function HomePage() {
             Travel is a vibe, not a grid of cells. Plan visually, route intelligently, and keep the chaos under control.
           </h2>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard")}
-                className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-5 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
-              >
-                Open dashboard
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => signInWithGoogle()}
-                className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-5 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
-              >
-                Sign in with Google
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard")}
+              className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-5 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
+            >
+              Open dashboard
+            </button>
             <button
               type="button"
               onClick={() => router.push("/start")}
