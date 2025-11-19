@@ -44,9 +44,20 @@ function handleAuthError(error: unknown) {
   return null;
 }
 
+async function ensureActivityBudgetColumn() {
+  try {
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "Activity" ADD COLUMN IF NOT EXISTS "budget" DECIMAL(10, 2);',
+    );
+  } catch (error) {
+    console.error("Failed to ensure activity budget column", error);
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { account } = await authenticateRequest(request);
+    await ensureActivityBudgetColumn();
     const trips = await prisma.trip.findMany({
       where: {
         OR: [{ userId: account.id }, { collaborators: { some: { email: account.email } } }],
@@ -86,6 +97,7 @@ export async function GET(request: Request) {
 export async function POST(req: Request) {
   try {
     const { account } = await authenticateRequest(req);
+    await ensureActivityBudgetColumn();
     const json = await req.json();
     const parsed = createTripSchema.safeParse(json);
 
