@@ -201,6 +201,9 @@ export function TripDashboard({
   const [titleSuggestionsLoading, setTitleSuggestionsLoading] = useState(false);
   const [titleSuggestionsError, setTitleSuggestionsError] = useState<string | null>(null);
   const titleSuggestionsAbortRef = useRef<AbortController | null>(null);
+  const activityUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [activityUploadLoading, setActivityUploadLoading] = useState(false);
+  const [activityUploadError, setActivityUploadError] = useState<string | null>(null);
   const [cityQuery, setCityQuery] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([]);
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
@@ -254,6 +257,19 @@ export function TripDashboard({
     }
     return null;
   };
+
+  async function fileToBase64(file: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.includes(",") ? result.split(",")[1] ?? "" : result;
+        resolve(base64);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   const headline = useMemo(() => {
     if (!isAuthenticated) return firebaseConfigured ? "Sign in to start" : "Configure Firebase";
@@ -698,6 +714,58 @@ export function TripDashboard({
       setTripError(err instanceof Error ? err.message : "Failed to save activity");
     } finally {
       setSavingActivity(false);
+    }
+  }
+
+  async function handleActivityUploadChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const MAX_SIZE_BYTES = 6 * 1024 * 1024;
+    if (file.size > MAX_SIZE_BYTES) {
+      setActivityUploadError("File too large. Max 6MB.");
+      event.target.value = "";
+      return;
+    }
+    try {
+      setActivityUploadLoading(true);
+      setActivityUploadError(null);
+      const base64 = await fileToBase64(file);
+      const res = await fetch("/api/ai/activity-from-upload", {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          data: base64,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to analyze document (${res.status})`);
+      }
+      const data = await res.json();
+      const activity = data.activity || {};
+      setActivityForm((prev) => ({
+        ...prev,
+        title: activity.title || prev.title,
+        notes: activity.notes || prev.notes,
+        location: activity.location || prev.location,
+        startLocation: activity.startLocation || prev.startLocation,
+        startTime: activity.startTime || prev.startTime,
+        endTime: activity.endTime || prev.endTime,
+        budget:
+          typeof activity.budget === "number" && !Number.isNaN(activity.budget)
+            ? String(activity.budget)
+            : prev.budget,
+      }));
+      if (typeof activity.type === "string" && activity.type.toLowerCase() === "hotel") {
+        setIsHotelActivity(true);
+      }
+    } catch (error) {
+      setActivityUploadError(error instanceof Error ? error.message : "Failed to analyze document");
+    } finally {
+      setActivityUploadLoading(false);
+      event.target.value = "";
     }
   }
 
@@ -1800,6 +1868,15 @@ export function TripDashboard({
                             />
                             Predict activity
                           </label>
+                          <button
+                            type="button"
+                            onClick={() => activityUploadInputRef.current?.click()}
+                            title="Upload a confirmation screenshot or PDF"
+                            className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-2 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard-sm transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
+                            disabled={activityUploadLoading}
+                          >
+                            {activityUploadLoading ? "Scanning..." : "Scan confirmation"}
+                          </button>
                         </div>
                         <input
                           id="activityTitle"
@@ -1833,6 +1910,16 @@ export function TripDashboard({
                               </li>
                             ))}
                           </ul>
+                        )}
+                        <input
+                          ref={activityUploadInputRef}
+                          type="file"
+                          accept="image/*,.pdf"
+                          className="hidden"
+                          onChange={handleActivityUploadChange}
+                        />
+                        {activityUploadError && (
+                          <p className="text-[11px] text-rose-500">{activityUploadError}</p>
                         )}
                       </div>
                         <div className="grid gap-3 sm:grid-cols-2">
