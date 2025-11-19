@@ -14,6 +14,8 @@ const createActivitySchema = z.object({
   startLocation: z.string().optional(),
   type: z.string().min(1).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
+  plannedBudget: z.coerce.number().nonnegative().optional(),
+  actualBudget: z.coerce.number().nonnegative().optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -101,6 +103,8 @@ export async function POST(
         type: parsed.data.type || null,
         source: parsed.data.type === "hotel" ? "hotel" : undefined,
         metadata: parsed.data.metadata ?? undefined,
+        plannedBudget: parsed.data.plannedBudget ?? null,
+        actualBudget: parsed.data.actualBudget ?? null,
       },
     });
 
