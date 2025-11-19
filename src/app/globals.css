@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -41,6 +43,19 @@ body::before {
   opacity: 0.45;
   pointer-events: none;
   animation: pulse 12s ease-in-out infinite alternate;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Archivo Black", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.data-mono {
+  font-family: "Space Mono", monospace;
+  letter-spacing: -0.01em;
 }
 
 @keyframes pulse {

@@ -1296,16 +1296,16 @@ export function TripDashboard() {
           </div>
 
           {selectedTrip && selectedTrip.days.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/30 px-3 py-2 text-xs shadow-hard">
+            <div className="flex gap-2 overflow-x-auto rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/30 px-3 py-2 text-xs shadow-hard [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
               {selectedTrip.days.map((day) => (
                 <button
                   key={day.id}
                   type="button"
                   onClick={() => setSelectedDayId(day.id)}
-                  className={`rounded-md border-2 px-4 py-1 font-black uppercase tracking-[0.2em] transition ${
+                  className={`rounded-md border-2 px-4 py-1 font-black uppercase tracking-[0.2em] transition-transform ${
                     selectedDayId === day.id
-                      ? "border-dayglo-void bg-white text-dayglo-void shadow-hard-sm"
-                      : "border-dayglo-void bg-paper text-dayglo-void shadow-hard-sm hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
+                      ? "border-dayglo-void bg-dayglo-void text-dayglo-yellow translate-y-1 shadow-none"
+                      : "border-dayglo-void bg-white text-dayglo-void hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF] shadow-hard-sm"
                   }`}
                 >
                   {format(new Date(day.date), "MMM d")}
@@ -1505,7 +1505,9 @@ export function TripDashboard() {
                                 <li key={activity.id} className="flex items-center justify-between gap-2">
                                   <div>
                                     <p className="font-black text-dayglo-void">{activity.title}</p>
-                                    <p className="text-xs font-semibold text-dayglo-void">{formatTimeRange(activity)}</p>
+                                    <span className="data-mono inline-flex items-center border border-dayglo-void bg-dayglo-pink px-2 py-0.5 text-xs font-bold text-dayglo-void shadow-[2px_2px_0px_0px_#050505]">
+                                      {formatTimeRange(activity)}
+                                    </span>
                                     {meta?.nights && (
                                       <p className="text-xs font-semibold text-dayglo-void">{meta.nights} night{meta.nights === 1 ? "" : "s"}</p>
                                     )}
@@ -1535,9 +1537,9 @@ export function TripDashboard() {
                               }`}
                             >
                               <p className="text-sm font-black text-dayglo-void">{activity.title}</p>
-                              <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">
+                              <span className="data-mono inline-flex items-center border border-dayglo-void bg-dayglo-pink px-2 py-0.5 text-[11px] font-bold uppercase text-dayglo-void shadow-[2px_2px_0px_0px_#050505]">
                                 {formatTimeRange(activity)}
-                              </p>
+                              </span>
                               {activity.location && (
                                 <p className="text-xs text-dayglo-void/80">{activity.location}</p>
                               )}
@@ -1555,7 +1557,9 @@ export function TripDashboard() {
                           <div>
                             <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Event detail</p>
                             <h4 className="text-lg font-black text-dayglo-void">{calendarEvent.title}</h4>
-                            <p className="text-sm font-semibold text-dayglo-void/80">{formatTimeRange(calendarEvent)}</p>
+                            <span className="data-mono inline-flex items-center border border-dayglo-void bg-dayglo-pink px-2 py-0.5 text-xs font-bold text-dayglo-void shadow-[2px_2px_0px_0px_#050505]">
+                              {formatTimeRange(calendarEvent)}
+                            </span>
                           </div>
                           {calendarEventHotel && (
                             <div className="flex flex-wrap items-center gap-2 text-xs text-dayglo-void">
@@ -2005,9 +2009,9 @@ export function TripDashboard() {
                                 <div className="flex items-center justify-between gap-3">
                                   <div>
                                     <p className="font-black text-dayglo-void">{activity.title}</p>
-                                    <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">
+                                    <span className="data-mono inline-flex items-center border border-dayglo-void bg-dayglo-pink px-2 py-0.5 text-xs font-bold text-dayglo-void shadow-[2px_2px_0px_0px_#050505]">
                                       {formatTimeRange(activity)}
-                                    </p>
+                                    </span>
                                     {meta?.nights && (
                                       <p className="text-xs font-semibold text-dayglo-void">{meta.nights} night{meta.nights === 1 ? "" : "s"}</p>
                                     )}
@@ -2041,9 +2045,9 @@ export function TripDashboard() {
                     )}
 
                     {selectedDayPlace && (
-                      <div className="space-y-2 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
-                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">City map</p>
-                        <div className="overflow-hidden rounded-xl border border-[#f5d9ff]">
+                      <div className="space-y-2 rounded-lg border-2 border-dayglo-void bg-paper p-3 shadow-hard">
+                        <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">City map</p>
+                        <div className="overflow-hidden rounded-xl border-2 border-dayglo-void shadow-hard-sm" style={{ filter: "grayscale(100%) contrast(110%)" }}>
                           {!mapError ? (
                             <Image
                               key={`${selectedDayPlace.lat},${selectedDayPlace.lng}`}
@@ -2066,10 +2070,10 @@ export function TripDashboard() {
                             />
                           )}
                         </div>
-                        <div className="flex flex-col gap-1 text-sm text-slate-700 md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-col gap-1 text-sm text-dayglo-void md:flex-row md:items-center md:justify-between">
                           <div>
-                            <p className="font-medium text-slate-900">{selectedDayPlace.description}</p>
-                            <p className="text-xs text-slate-500">
+                            <p className="font-black text-dayglo-void">{selectedDayPlace.description}</p>
+                            <p className="text-xs font-semibold text-dayglo-void/70">
                               {selectedDayPlace.lat.toFixed(3)}, {selectedDayPlace.lng.toFixed(3)}
                             </p>
                           </div>
@@ -2077,7 +2081,7 @@ export function TripDashboard() {
                             href={`https://www.google.com/maps/search/?api=1&query=${selectedDayPlace.lat},${selectedDayPlace.lng}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded-full border border-[#ebaef5] px-4 py-1 text-xs uppercase tracking-[0.3em] text-slate-900 transition hover:border-[#d77dff]"
+                            className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-4 py-1 text-xs font-black uppercase tracking-[0.3em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                           >
                             Open maps
                           </a>
