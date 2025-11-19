@@ -1439,7 +1439,7 @@ export function TripDashboard({
                     title="Edit this trip's details"
                     className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                   >
-                    {showTripDetailsForm ? "Hide trip editor" : "Edit trip"}
+                    {showTripDetailsForm ? "Hide trip editor" : "Trip settings"}
                   </button>
                 )}
                 <div className="flex flex-wrap gap-2">
@@ -1453,7 +1453,7 @@ export function TripDashboard({
                       : "border-dayglo-void text-dayglo-void shadow-hard-sm hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
                   }`}
                 >
-                  Edit trip
+                  Timeline
                 </button>
                   <button
                     type="button"
@@ -1521,7 +1521,7 @@ export function TripDashboard({
                 onClick={() => setShowAddDayForm((prev) => !prev)}
                 className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard-sm transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
               >
-                {showAddDayForm ? "Close" : "Add day"}
+                {showAddDayForm ? "Close" : "Add day(s)"}
               </button>
             </div>
           )}
@@ -1573,7 +1573,7 @@ export function TripDashboard({
                 disabled={savingNewDay}
                 className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait"
               >
-                {savingNewDay ? "Adding..." : "Add day"}
+                {savingNewDay ? "Adding..." : "Add day(s)"}
               </button>
             </form>
           )}
