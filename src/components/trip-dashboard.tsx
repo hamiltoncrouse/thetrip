@@ -204,7 +204,7 @@ export function TripDashboard({
   const [hotelPlanError, setHotelPlanError] = useState<string | null>(null);
   const [shareEmail, setShareEmail] = useState("");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
-  const [titleSuggestEnabled, setTitleSuggestEnabled] = useState(false);
+  const [titleSuggestEnabled, setTitleSuggestEnabled] = useState(true);
   const [titleSuggestions, setTitleSuggestions] = useState<PlaceSuggestion[]>([]);
   const [titleSuggestionsLoading, setTitleSuggestionsLoading] = useState(false);
   const [titleSuggestionsError, setTitleSuggestionsError] = useState<string | null>(null);
@@ -1221,6 +1221,7 @@ export function TripDashboard({
                       type="button"
                       onClick={() => shareTripWithEmail()}
                       disabled={!shareEmail.trim() || !selectedTripId}
+                      title="Email this trip to the address above"
                       className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Share trip
@@ -1231,6 +1232,7 @@ export function TripDashboard({
                 <button
                   type="button"
                   onClick={() => setShowTripForm((prev) => !prev)}
+                  title="Toggle the new trip form"
                   className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                 >
                   {showTripForm ? "Close form" : "New trip"}
@@ -1243,6 +1245,7 @@ export function TripDashboard({
                         deleteTrip(selectedTrip.id);
                       }
                     }}
+                    title="Permanently delete this trip"
                     className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                   >
                     Delete trip
@@ -1276,6 +1279,7 @@ export function TripDashboard({
                   <button
                     type="button"
                     onClick={() => setIsChatOpen((prev) => !prev)}
+                    title="Toggle Fonda, the AI co-pilot"
                     className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                   >
                     {isChatOpen ? "Hide Fonda" : "Open Fonda"}
@@ -1758,6 +1762,7 @@ export function TripDashboard({
                       <button
                         type="submit"
                         disabled={savingDay}
+                        title="Save this day's city and notes"
                         className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait disabled:opacity-60"
                       >
                         {savingDay ? "Saving..." : "Save day"}
@@ -1850,14 +1855,17 @@ export function TripDashboard({
                       <div className="relative space-y-1">
                         <div className="flex items-center justify-between text-xs text-fuchsia-500">
                           <label htmlFor="activityTitle">Title</label>
-                          <label className="flex items-center gap-1 text-[11px] text-slate-600">
+                          <label
+                            className="flex items-center gap-1 text-[11px] text-slate-600"
+                            title="Use AI to predict this activity"
+                          >
                             <input
                               type="checkbox"
                               checked={titleSuggestEnabled}
                               onChange={(event) => setTitleSuggestEnabled(event.target.checked)}
                               className="h-3 w-3 rounded border-[#f5d9ff] text-fuchsia-500 focus:ring-0"
                             />
-                            Suggest places
+                            Predict activity
                           </label>
                         </div>
                         <input
@@ -1983,6 +1991,7 @@ export function TripDashboard({
                           <button
                             type="submit"
                             disabled={savingActivity}
+                            title="Add this activity to the day"
                             className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait disabled:opacity-60"
                           >
                             {savingActivity
@@ -1995,6 +2004,7 @@ export function TripDashboard({
                             <button
                               type="button"
                               onClick={cancelActivityEdit}
+                              title="Stop editing and reset the form"
                               className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                             >
                               Cancel
@@ -2107,6 +2117,7 @@ export function TripDashboard({
                             type="button"
                             onClick={() => loadHotelsNearDay(1, false)}
                             disabled={hotelLoading}
+                            title="Fetch live hotels near this city"
                             className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {hotelLoading ? "Searching..." : "Find hotels"}
@@ -2238,6 +2249,7 @@ export function TripDashboard({
                                       type="button"
                                       onClick={() => addHotelToPlan(hotel)}
                                       disabled={addingHotelId === hotel.id || hotelLoading}
+                                      title="Add this hotel stay to your plan"
                                       className="rounded-full border border-[#ebaef5] px-3 py-1 font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                       {addingHotelId === hotel.id ? "Adding..." : "Add to plan"}
@@ -2253,6 +2265,7 @@ export function TripDashboard({
                                   type="button"
                                   onClick={() => loadHotelsNearDay(hotelPage + 1, true)}
                                   disabled={hotelLoading}
+                                  title="Load more hotel results"
                                   className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   {hotelLoading ? "Loading..." : "Load more"}
