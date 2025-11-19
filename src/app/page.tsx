@@ -36,6 +36,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!isAuthenticated || !idToken) {
       setTripOptions([]);
+      setTripError(null);
       return;
     }
     let cancelled = false;
@@ -82,6 +83,32 @@ export default function HomePage() {
           <h2 className="mx-auto max-w-3xl text-base font-semibold uppercase text-dayglo-void/80 sm:text-lg">
             Travel is a vibe, not a grid of cells. Plan visually, route intelligently, and keep the chaos under control.
           </h2>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard")}
+                className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-5 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
+              >
+                Open dashboard
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => signInWithGoogle()}
+                className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-5 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
+              >
+                Sign in with Google
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => router.push("/start")}
+              className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-5 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
+            >
+              Start a trip
+            </button>
+          </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3">
