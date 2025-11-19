@@ -118,6 +118,14 @@ const emptyActivityForm = {
   budget: "",
 };
 
+const emptyTripDetailsForm = {
+  title: "",
+  startDate: "",
+  endDate: "",
+  homeCity: clientEnv.NEXT_PUBLIC_DEFAULT_HOME_CITY,
+  description: "",
+};
+
 const initialChat: ChatMessage[] = [
   {
     id: "intro",
@@ -196,6 +204,13 @@ export function TripDashboard({
   const [hotelPlanError, setHotelPlanError] = useState<string | null>(null);
   const [shareEmail, setShareEmail] = useState("");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [tripDetailsForm, setTripDetailsForm] = useState(emptyTripDetailsForm);
+  const [showTripDetailsForm, setShowTripDetailsForm] = useState(false);
+  const [savingTripDetails, setSavingTripDetails] = useState(false);
+  const [tripDetailsStatus, setTripDetailsStatus] = useState<string | null>(null);
+  const [showAddDayForm, setShowAddDayForm] = useState(false);
+  const [newDayForm, setNewDayForm] = useState({ date: "", city: "", notes: "" });
+  const [savingNewDay, setSavingNewDay] = useState(false);
   const [titleSuggestEnabled, setTitleSuggestEnabled] = useState(true);
   const [titleSuggestions, setTitleSuggestions] = useState<PlaceSuggestion[]>([]);
   const [titleSuggestionsLoading, setTitleSuggestionsLoading] = useState(false);
@@ -257,6 +272,9 @@ export function TripDashboard({
     }
     return null;
   };
+
+  const sortDaysByDate = (days: TripDay[]) =>
+    [...days].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   async function fileToBase64(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -424,6 +442,20 @@ export function TripDashboard({
       setHotelError(null);
     }
   }, [selectedDay, dayPlaces]);
+
+  useEffect(() => {
+    if (!selectedTrip) {
+      setTripDetailsForm(emptyTripDetailsForm);
+      return;
+    }
+    setTripDetailsForm({
+      title: selectedTrip.title,
+      homeCity: selectedTrip.homeCity || "",
+      startDate: selectedTrip.startDate ? new Date(selectedTrip.startDate).toISOString().slice(0, 10) : "",
+      endDate: selectedTrip.endDate ? new Date(selectedTrip.endDate).toISOString().slice(0, 10) : "",
+      description: selectedTrip.description || "",
+    });
+  }, [selectedTrip]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1022,6 +1054,97 @@ export function TripDashboard({
     }
   }
 
+  async function saveTripDetails(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedTrip) return;
+    setSavingTripDetails(true);
+    setTripError(null);
+    setTripDetailsStatus(null);
+    try {
+      const res = await fetch(`/api/trips/${selectedTrip.id}`, {
+        method: "PATCH",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          title: tripDetailsForm.title,
+          description: tripDetailsForm.description,
+          homeCity: tripDetailsForm.homeCity,
+          startDate: tripDetailsForm.startDate || undefined,
+          endDate: tripDetailsForm.endDate || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to update trip (${res.status})`);
+      }
+      const data = await res.json();
+      setTrips((prev) =>
+        prev.map((trip) =>
+          trip.id === selectedTrip.id
+            ? {
+                ...trip,
+                title: data.trip.title,
+                description: data.trip.description,
+                homeCity: data.trip.homeCity,
+                startDate: data.trip.startDate,
+                endDate: data.trip.endDate,
+              }
+            : trip,
+        ),
+      );
+      setTripDetailsStatus("Trip updated");
+    } catch (error) {
+      setTripError(error instanceof Error ? error.message : "Failed to update trip");
+    } finally {
+      setSavingTripDetails(false);
+    }
+  }
+
+  async function addTripDay(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedTrip) return;
+    if (!newDayForm.date || !newDayForm.city.trim()) {
+      setTripError("Date and city are required to add a day.");
+      return;
+    }
+    setSavingNewDay(true);
+    setTripError(null);
+    try {
+      const res = await fetch(`/api/trips/${selectedTrip.id}/days`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          date: newDayForm.date,
+          city: newDayForm.city,
+          notes: newDayForm.notes,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to add day (${res.status})`);
+      }
+      const data = await res.json();
+      const created = data.day as TripDay;
+      setTrips((prev) =>
+        prev.map((trip) =>
+          trip.id === selectedTrip.id
+            ? {
+                ...trip,
+                days: sortDaysByDate([...(trip.days || []), { ...created, activities: [] }]),
+              }
+            : trip,
+        ),
+      );
+      setSelectedDayId(created.id);
+      setShowAddDayForm(false);
+      setNewDayForm({ date: "", city: "", notes: "" });
+      setTripDetailsStatus("Day added");
+    } catch (error) {
+      setTripError(error instanceof Error ? error.message : "Failed to add day");
+    } finally {
+      setSavingNewDay(false);
+    }
+  }
+
   function handleCityInputChange(value: string) {
     suppressSuggestionsRef.current = false;
     setCityQuery(value);
@@ -1309,6 +1432,16 @@ export function TripDashboard({
                     Delete trip
                   </button>
                 )}
+                {selectedTrip && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTripDetailsForm((prev) => !prev)}
+                    title="Edit this trip's details"
+                    className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
+                  >
+                    {showTripDetailsForm ? "Hide trip editor" : "Edit trip"}
+                  </button>
+                )}
                 <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -1363,26 +1496,189 @@ export function TripDashboard({
             </div>
           </div>
 
-          {selectedTrip && selectedTrip.days.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/30 px-3 py-2 text-xs shadow-hard [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
-              {selectedTrip.days.map((day) => (
-                <button
-                  key={day.id}
-                  type="button"
-                  onClick={() => setSelectedDayId(day.id)}
-                  className={`rounded-md border-2 px-4 py-1 font-black uppercase tracking-[0.2em] transition-transform ${
-                    selectedDayId === day.id
-                      ? "border-dayglo-void bg-dayglo-void text-dayglo-yellow translate-y-1 shadow-none"
-                      : "border-dayglo-void bg-white text-dayglo-void hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF] shadow-hard-sm"
-                  }`}
-                >
-                  {format(new Date(day.date), "MMM d")}
-                </button>
-              ))}
+          {selectedTrip && (
+            <div className="flex flex-wrap gap-2 rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/30 px-3 py-2 text-xs shadow-hard [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
+              {selectedTrip.days.length ? (
+                selectedTrip.days.map((day) => (
+                  <button
+                    key={day.id}
+                    type="button"
+                    onClick={() => setSelectedDayId(day.id)}
+                    className={`rounded-md border-2 px-4 py-1 font-black uppercase tracking-[0.2em] transition-transform ${
+                      selectedDayId === day.id
+                        ? "border-dayglo-void bg-dayglo-void text-dayglo-yellow translate-y-1 shadow-none"
+                        : "border-dayglo-void bg-white text-dayglo-void hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF] shadow-hard-sm"
+                    }`}
+                  >
+                    {format(new Date(day.date), "MMM d")}
+                  </button>
+                ))
+              ) : (
+                <p className="text-xs font-semibold text-dayglo-void">No days yet.</p>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAddDayForm((prev) => !prev)}
+                className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard-sm transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
+              >
+                {showAddDayForm ? "Close" : "Add day"}
+              </button>
             </div>
           )}
 
-          {/* Trip creation handled via /start wizard */}
+          {showAddDayForm && selectedTrip && (
+            <form
+              className="grid gap-3 rounded-lg border-2 border-dayglo-void bg-paper p-3 shadow-hard"
+              onSubmit={addTripDay}
+            >
+              <div>
+                <label className="text-xs font-black uppercase" htmlFor="newDayDate">
+                  Date
+                </label>
+                <input
+                  id="newDayDate"
+                  type="date"
+                  value={newDayForm.date}
+                  onChange={(e) => setNewDayForm((prev) => ({ ...prev, date: e.target.value }))}
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase" htmlFor="newDayCity">
+                  City
+                </label>
+                <input
+                  id="newDayCity"
+                  value={newDayForm.city}
+                  onChange={(e) => setNewDayForm((prev) => ({ ...prev, city: e.target.value }))}
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase" htmlFor="newDayNotes">
+                  Notes
+                </label>
+                <textarea
+                  id="newDayNotes"
+                  value={newDayForm.notes}
+                  onChange={(e) => setNewDayForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  rows={2}
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={savingNewDay}
+                className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait"
+              >
+                {savingNewDay ? "Adding..." : "Add day"}
+              </button>
+            </form>
+          )}
+
+          {showTripDetailsForm && selectedTrip && (
+            <form
+              className="grid gap-4 rounded-lg border-2 border-dayglo-void bg-paper p-4 shadow-hard"
+              onSubmit={saveTripDetails}
+            >
+              <div className="sm:col-span-2">
+                <label className="text-sm font-black text-dayglo-void" htmlFor="tripTitle">
+                  Trip title
+                </label>
+                <input
+                  id="tripTitle"
+                  required
+                  value={tripDetailsForm.title}
+                  onChange={(e) => setTripDetailsForm((prev) => ({ ...prev, title: e.target.value }))}
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-black text-dayglo-void" htmlFor="tripHomeCity">
+                  Base city
+                </label>
+                <input
+                  id="tripHomeCity"
+                  value={tripDetailsForm.homeCity}
+                  onChange={(e) => setTripDetailsForm((prev) => ({ ...prev, homeCity: e.target.value }))}
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-black text-dayglo-void" htmlFor="tripStart">
+                    Start date
+                  </label>
+                  <input
+                    id="tripStart"
+                    type="date"
+                    value={tripDetailsForm.startDate}
+                    onChange={(e) => setTripDetailsForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                    className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-black text-dayglo-void" htmlFor="tripEnd">
+                    End date
+                  </label>
+                  <input
+                    id="tripEnd"
+                    type="date"
+                    value={tripDetailsForm.endDate}
+                    onChange={(e) => setTripDetailsForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                    className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                  />
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-sm font-black text-dayglo-void" htmlFor="tripDescription">
+                  Notes / intent
+                </label>
+                <textarea
+                  id="tripDescription"
+                  value={tripDetailsForm.description}
+                  onChange={(e) => setTripDetailsForm((prev) => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                />
+              </div>
+              <div className="flex items-center gap-3 sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={savingTripDetails}
+                  className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait"
+                >
+                  {savingTripDetails ? "Saving..." : "Save trip"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTripDetailsForm(false);
+                    setTripDetailsStatus(null);
+                    if (selectedTrip) {
+                      setTripDetailsForm({
+                        title: selectedTrip.title,
+                        homeCity: selectedTrip.homeCity || "",
+                        startDate: selectedTrip.startDate
+                          ? new Date(selectedTrip.startDate).toISOString().slice(0, 10)
+                          : "",
+                        endDate: selectedTrip.endDate
+                          ? new Date(selectedTrip.endDate).toISOString().slice(0, 10)
+                          : "",
+                        description: selectedTrip.description || "",
+                      });
+                    }
+                  }}
+                  className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
+                >
+                  Cancel
+                </button>
+                {tripDetailsStatus && <p className="text-xs text-dayglo-void">{tripDetailsStatus}</p>}
+              </div>
+            </form>
+          )}
         </section>
 
         {view === "calendar" ? (
