@@ -93,8 +93,6 @@ model Activity {
   travelDurationSeconds Int?
   travelSummary        String?
   travelPolyline       String?
-  plannedBudget        Decimal? @db.Decimal(10, 2)
-  actualBudget         Decimal? @db.Decimal(10, 2)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

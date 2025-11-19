@@ -24,8 +24,6 @@ type Activity = {
   type?: string | null;
   metadata?: Record<string, unknown> | null;
   source?: string | null;
-  plannedBudget?: number | string | null;
-  actualBudget?: number | string | null;
 };
 
 type HotelActivityMetadata = {
@@ -116,8 +114,6 @@ const emptyActivityForm = {
   notes: "",
   location: "",
   startLocation: "",
-  plannedBudget: "",
-  actualBudget: "",
 };
 
 const initialChat: ChatMessage[] = [
@@ -232,48 +228,6 @@ export function TripDashboard({
     return base;
   }, [idToken]);
 
-  const currencyFormatter = useMemo(
-    () => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }),
-    [],
-  );
-
-  const parseBudgetNumber = (value: string | number | null | undefined) => {
-    if (typeof value === "number") return Number.isFinite(value) ? value : null;
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-    return null;
-  };
-
-  const parseBudgetInput = (value: string) => {
-    if (!value.trim()) return undefined;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  };
-
-  const getActivityBudget = (activity: Activity) => {
-    return {
-      planned: parseBudgetNumber(activity.plannedBudget),
-      actual: parseBudgetNumber(activity.actualBudget),
-    };
-  };
-
-  const summarizeDayBudget = (day: TripDay | null) => {
-    if (!day) return null;
-    const totals = (day.activities || []).reduce(
-      (acc, activity) => {
-        const { planned, actual } = getActivityBudget(activity);
-        if (planned !== null) acc.planned += planned;
-        if (actual !== null) acc.actual += actual;
-        return acc;
-      },
-      { planned: 0, actual: 0 },
-    );
-    if (!totals.planned && !totals.actual) return null;
-    return totals;
-  };
-
   const headline = useMemo(() => {
     if (!isAuthenticated) return firebaseConfigured ? "Sign in to start" : "Configure Firebase";
     if (!trips.length) return "Create your first trip";
@@ -346,9 +300,6 @@ export function TripDashboard({
   const calendarEvent = calendarDay?.activities?.find((activity) => activity.id === calendarEventId) || null;
   const calendarHotels = calendarDay?.activities?.filter((activity) => activity.type === "hotel") || [];
   const calendarEventHotel = calendarEvent ? getHotelMetadata(calendarEvent) : null;
-  const calendarEventBudget = calendarEvent ? getActivityBudget(calendarEvent) : null;
-  const selectedDayBudget = summarizeDayBudget(selectedDay);
-  const calendarDayBudget = summarizeDayBudget(calendarDay);
 
   const dayByDateKey = useMemo(() => {
     const map: Record<string, TripDay> = {};
@@ -609,8 +560,6 @@ export function TripDashboard({
     }
     setSavingActivity(true);
     setTripError(null);
-    const plannedBudgetValue = parseBudgetInput(activityForm.plannedBudget);
-    const actualBudgetValue = parseBudgetInput(activityForm.actualBudget);
     const payload = {
       title: activityForm.title,
       startTime: activityForm.startTime,
@@ -620,8 +569,6 @@ export function TripDashboard({
       startLocation: activityForm.startLocation || undefined,
       type: isHotelActivity ? "hotel" : undefined,
       metadata: isHotelActivity ? { kind: "hotel", nights: hotelStayNights } : undefined,
-      plannedBudget: plannedBudgetValue,
-      actualBudget: actualBudgetValue,
     };
 
     try {
@@ -649,7 +596,6 @@ export function TripDashboard({
                 kind: "hotel",
                 nights: hotelStayNights,
                 night: index + 1,
-                ...(payload.metadata || {}),
               },
             }),
           });
@@ -770,8 +716,6 @@ export function TripDashboard({
       notes: activity.description || "",
       location: activity.location || "",
       startLocation: activity.startLocation || "",
-      plannedBudget: activity.plannedBudget ? String(activity.plannedBudget) : "",
-      actualBudget: activity.actualBudget ? String(activity.actualBudget) : "",
     });
     setIsHotelActivity(Boolean(hotelMeta));
     setHotelStayNights(hotelMeta?.nights && hotelMeta.nights > 0 ? hotelMeta.nights : 1);
@@ -1394,11 +1338,7 @@ export function TripDashboard({
                                 <span className="text-sm font-black text-dayglo-void">
                                   {dateValue.getDate()}
                                 </span>
-                                {tripDay && (
-                                  <span className="hidden text-[10px] font-black uppercase text-dayglo-pink sm:inline">
-                                    {tripDay.city}
-                                  </span>
-                                )}
+                                {tripDay && <span className="text-[10px] font-black uppercase text-dayglo-pink">{tripDay.city}</span>}
                               </div>
                               {tripDay ? (
                                 <ul className="mt-2 hidden space-y-1 text-[11px] text-dayglo-void sm:block">
@@ -1446,21 +1386,6 @@ export function TripDashboard({
                         <p className="text-sm font-semibold text-dayglo-void">{calendarDay.city}</p>
                         {calendarDay.notes && (
                           <p className="mt-2 text-sm text-dayglo-void">{calendarDay.notes}</p>
-                        )}
-                        {calendarDayBudget && (
-                          <div className="mt-3 rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 px-3 py-2">
-                            <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">Budget tracker</p>
-                            {calendarDayBudget.actual > 0 && (
-                              <p className="data-mono text-xs text-dayglo-void">
-                                Actual {currencyFormatter.format(calendarDayBudget.actual)}
-                              </p>
-                            )}
-                            {calendarDayBudget.planned > 0 && (
-                              <p className="data-mono text-xs text-dayglo-void">
-                                Planned {currencyFormatter.format(calendarDayBudget.planned)}
-                              </p>
-                            )}
-                          </div>
                         )}
                       </div>
                       {calendarHotels.length > 0 && (
@@ -1551,16 +1476,6 @@ export function TripDashboard({
                                 >
                                   View offer
                                 </a>
-                              )}
-                            </div>
-                          )}
-                          {calendarEventBudget && (calendarEventBudget.actual || calendarEventBudget.planned) && (
-                            <div className="data-mono text-xs text-dayglo-void">
-                              {calendarEventBudget.actual !== null && calendarEventBudget.actual > 0 && (
-                                <p>Actual {currencyFormatter.format(calendarEventBudget.actual)}</p>
-                              )}
-                              {calendarEventBudget.planned !== null && calendarEventBudget.planned > 0 && (
-                                <p>Planned {currencyFormatter.format(calendarEventBudget.planned)}</p>
                               )}
                             </div>
                           )}
@@ -1727,21 +1642,6 @@ export function TripDashboard({
                           placeholder="Morning wander, afternoon train, late dinner"
                         />
                       </div>
-                      {selectedDayBudget && (
-                        <div className="rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 px-3 py-2">
-                          <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">Budget tracker</p>
-                          {selectedDayBudget.actual > 0 && (
-                            <p className="data-mono text-xs text-dayglo-void">
-                              Actual {currencyFormatter.format(selectedDayBudget.actual)}
-                            </p>
-                          )}
-                          {selectedDayBudget.planned > 0 && (
-                            <p className="data-mono text-xs text-dayglo-void">
-                              Planned {currencyFormatter.format(selectedDayBudget.planned)}
-                            </p>
-                          )}
-                        </div>
-                      )}
                       <button
                         type="submit"
                         disabled={savingDay}
@@ -1759,8 +1659,6 @@ export function TripDashboard({
                           <ol className="space-y-2">
                             {orderedActivities.map((activity) => {
                               const hotelMeta = getHotelMetadata(activity);
-                              const { planned: activityPlannedBudget, actual: activityActualBudget } =
-                                getActivityBudget(activity);
                               return (
                                 <li
                                   key={activity.id}
@@ -1793,17 +1691,6 @@ export function TripDashboard({
                                       )}
                                       {activity.travelSummary && (
                                         <p className="text-xs font-semibold text-dayglo-lime">{activity.travelSummary}</p>
-                                      )}
-                                      {(activityActualBudget !== null || activityPlannedBudget !== null) && (
-                                        <p className="data-mono text-xs text-dayglo-void">
-                                          {activityActualBudget !== null
-                                            ? `Actual ${currencyFormatter.format(activityActualBudget)}`
-                                            : null}
-                                          {activityActualBudget !== null && activityPlannedBudget !== null ? " · " : ""}
-                                          {activityPlannedBudget !== null
-                                            ? `Planned ${currencyFormatter.format(activityPlannedBudget)}`
-                                            : null}
-                                        </p>
                                       )}
                                       {activity.startLocation && activity.location && (
                                         <a
@@ -1983,37 +1870,7 @@ export function TripDashboard({
                           placeholder="Hotel de Ville"
                         />
                       </div>
-                      <div>
-                        <label className="text-xs text-fuchsia-500" htmlFor="plannedBudget" title="Estimated spend for this activity">
-                          Planned budget (optional)
-                        </label>
-                        <input
-                          id="plannedBudget"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={activityForm.plannedBudget}
-                          onChange={(e) => setActivityForm((prev) => ({ ...prev, plannedBudget: e.target.value }))}
-                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                          placeholder="e.g. 120"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-fuchsia-500" htmlFor="actualBudget" title="What you really spent">
-                          Actual budget (optional)
-                        </label>
-                        <input
-                          id="actualBudget"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={activityForm.actualBudget}
-                          onChange={(e) => setActivityForm((prev) => ({ ...prev, actualBudget: e.target.value }))}
-                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                          placeholder="e.g. 98.50"
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             type="submit"
                             disabled={savingActivity}
