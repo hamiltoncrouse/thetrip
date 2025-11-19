@@ -164,7 +164,13 @@ const getHotelMetadata = (activity: Activity): HotelActivityMetadata | null => {
   };
 };
 
-export function TripDashboard() {
+export function TripDashboard({
+  initialTripId = null,
+  initialView = "timeline",
+}: {
+  initialTripId?: string | null;
+  initialView?: "timeline" | "calendar";
+}) {
   const { status, user, idToken, firebaseConfigured, signInWithGoogle, signOut, error } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(false);
@@ -172,7 +178,7 @@ export function TripDashboard() {
   const [tripForm, setTripForm] = useState(emptyTripForm);
   const [showTripForm, setShowTripForm] = useState(false);
   const [creatingTrip, setCreatingTrip] = useState(false);
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(initialTripId);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [dayForm, setDayForm] = useState(emptyDayForm);
   const [savingDay, setSavingDay] = useState(false);
@@ -215,7 +221,7 @@ export function TripDashboard() {
   const createPlacesToken = () =>
     typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11);
   const [placesSessionToken, setPlacesSessionToken] = useState<string>(createPlacesToken);
-  const [view, setView] = useState<"timeline" | "calendar">("timeline");
+  const [view, setView] = useState<"timeline" | "calendar">(initialView);
   const [calendarDayId, setCalendarDayId] = useState<string | null>(null);
   const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
 
