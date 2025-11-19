@@ -73,8 +73,13 @@ export default function HomePage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-16">
         <header className="space-y-4 text-center">
           <p className="text-xs font-black uppercase tracking-[0.35em] text-dayglo-pink">{headingTagline}</p>
-          <h1 className="text-5xl font-black uppercase sm:text-6xl">KILL THE SPREADSHEET.</h1>
-          <h2 className="mx-auto max-w-3xl text-lg font-semibold uppercase text-dayglo-void">
+          <h1 className="text-5xl font-black uppercase sm:text-7xl">
+            <span className="bg-gradient-to-r from-dayglo-pink via-dayglo-lime to-dayglo-orange bg-clip-text text-transparent">
+              THE TRIP
+            </span>
+          </h1>
+          <p className="text-lg font-black uppercase text-dayglo-void">Kill the spreadsheet.</p>
+          <h2 className="mx-auto max-w-3xl text-base font-semibold uppercase text-dayglo-void/80 sm:text-lg">
             Travel is a vibe, not a grid of cells. Plan visually, route intelligently, and keep the chaos under control.
           </h2>
         </header>

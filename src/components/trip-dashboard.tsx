@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, endOfWeek, format, startOfWeek } from "date-fns";
 
@@ -101,14 +102,6 @@ type HotelOption = {
 
 const randomId = () => Math.random().toString(36).slice(2, 11);
 
-const emptyTripForm = {
-  title: "",
-  startDate: "",
-  endDate: "",
-  homeCity: clientEnv.NEXT_PUBLIC_DEFAULT_HOME_CITY,
-  description: "",
-};
-
 const emptyDayForm = {
   city: "",
   notes: "",
@@ -175,9 +168,6 @@ export function TripDashboard({
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(false);
   const [tripError, setTripError] = useState<string | null>(null);
-  const [tripForm, setTripForm] = useState(emptyTripForm);
-  const [showTripForm, setShowTripForm] = useState(false);
-  const [creatingTrip, setCreatingTrip] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(initialTripId);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [dayForm, setDayForm] = useState(emptyDayForm);
@@ -222,6 +212,7 @@ export function TripDashboard({
     typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11);
   const [placesSessionToken, setPlacesSessionToken] = useState<string>(createPlacesToken);
   const [view, setView] = useState<"timeline" | "calendar">(initialView);
+  const router = useRouter();
   const [calendarDayId, setCalendarDayId] = useState<string | null>(null);
   const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
 
@@ -473,40 +464,6 @@ export function TripDashboard({
 
     return () => clearTimeout(handler);
   }, [cityQuery, placesSessionToken, selectedDayPlace]);
-
-  async function createTrip(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!isAuthenticated) return;
-    setCreatingTrip(true);
-    setTripError(null);
-    try {
-      const res = await fetch("/api/trips", {
-        method: "POST",
-        headers: jsonHeaders,
-        body: JSON.stringify({
-          title: tripForm.title,
-          description: tripForm.description || undefined,
-          homeCity: tripForm.homeCity || undefined,
-          startDate: tripForm.startDate || undefined,
-          endDate: tripForm.endDate || undefined,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Failed to create trip (${res.status})`);
-      }
-      const data = await res.json();
-      setTrips((prev) => [data.trip as Trip, ...prev]);
-      setTripForm(emptyTripForm);
-      setShowTripForm(false);
-      setSelectedTripId(data.trip.id);
-      setSelectedDayId(data.trip.days[0]?.id ?? null);
-    } catch (err) {
-      setTripError(err instanceof Error ? err.message : "Error creating trip");
-    } finally {
-      setCreatingTrip(false);
-    }
-  }
 
   async function deleteTrip(tripId: string) {
     try {
@@ -1231,11 +1188,11 @@ export function TripDashboard({
                 )}
                 <button
                   type="button"
-                  onClick={() => setShowTripForm((prev) => !prev)}
-                  title="Toggle the new trip form"
+                  onClick={() => router.push("/start")}
+                  title="Launch the new trip wizard"
                   className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
                 >
-                  {showTripForm ? "Close form" : "New trip"}
+                  New trip
                 </button>
                 {selectedTrip && (
                   <button
@@ -1324,81 +1281,7 @@ export function TripDashboard({
             </div>
           )}
 
-          {showTripForm && (
-            <form className="grid gap-4 rounded-lg border-2 border-dayglo-void bg-paper p-4 shadow-hard" onSubmit={createTrip}>
-              <div className="sm:col-span-2">
-                <label className="text-sm font-black text-dayglo-void" htmlFor="title">
-                  Trip title
-                </label>
-                <input
-                  id="title"
-                  required
-                  value={tripForm.title}
-                  onChange={(e) => setTripForm((prev) => ({ ...prev, title: e.target.value }))}
-                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                  placeholder="Neon Riviera"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-black text-dayglo-void" htmlFor="homeCity">
-                  Base city
-                </label>
-                <input
-                  id="homeCity"
-                  value={tripForm.homeCity}
-                  onChange={(e) => setTripForm((prev) => ({ ...prev, homeCity: e.target.value }))}
-                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                  placeholder="Lisbon"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-black text-dayglo-void" htmlFor="startDate">
-                    Start date
-                  </label>
-                  <input
-                    id="startDate"
-                    type="date"
-                    value={tripForm.startDate}
-                    onChange={(e) => setTripForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                    className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-black text-dayglo-void" htmlFor="endDate">
-                    End date
-                  </label>
-                  <input
-                    id="endDate"
-                    type="date"
-                    value={tripForm.endDate}
-                    onChange={(e) => setTripForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                    className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                  />
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-sm font-black text-dayglo-void" htmlFor="description">
-                  Notes / intent
-                </label>
-                <textarea
-                  id="description"
-                  value={tripForm.description}
-                  onChange={(e) => setTripForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                  rows={3}
-                  placeholder="Anniversary loop, mix rooftop bars with train rides"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={creatingTrip}
-                className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-lime py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait disabled:opacity-60 sm:col-span-2"
-              >
-                {creatingTrip ? "Creating..." : "Create trip"}
-              </button>
-            </form>
-          )}
+          {/* Trip creation handled via /start wizard */}
         </section>
 
         {view === "calendar" ? (
@@ -1458,7 +1341,7 @@ export function TripDashboard({
                                 {tripDay && <span className="text-[10px] font-black uppercase text-dayglo-pink">{tripDay.city}</span>}
                               </div>
                               {tripDay ? (
-                                <ul className="mt-2 space-y-1 text-[11px] text-dayglo-void">
+                                <ul className="mt-2 hidden space-y-1 text-[11px] text-dayglo-void sm:block">
                                   {(tripDay.activities || []).slice(0, 2).map((activity) => (
                                     <li
                                       key={activity.id}
@@ -1482,7 +1365,7 @@ export function TripDashboard({
                                   )}
                                 </ul>
                               ) : (
-                                <p className="mt-6 text-center text-dayglo-void/60">—</p>
+                                <p className="mt-6 hidden text-center text-dayglo-void/60 sm:block">—</p>
                               )}
                             </button>
                           );
