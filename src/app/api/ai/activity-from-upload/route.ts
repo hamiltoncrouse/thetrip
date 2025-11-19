@@ -107,6 +107,30 @@ Use 24-hour HH:MM times. If you see confirmation numbers or itinerary references
       console.error("Failed to parse AI extraction", error, jsonText);
     }
 
+    let budgetValue: number | null = null;
+    if (typeof activity.budget === "number" && Number.isFinite(activity.budget)) {
+      budgetValue = activity.budget;
+    } else if (typeof activity.budget === "string") {
+      const parsed = Number(activity.budget.replace(/,/g, ""));
+      if (Number.isFinite(parsed)) budgetValue = parsed;
+    }
+
+    if (budgetValue === null && typeof activity.notes === "string") {
+      const note = activity.notes;
+      const currencyRegex = /(?:[$€£]|USD|EUR|GBP)\s*([0-9]{1,3}(?:[,\.][0-9]{3})*(?:[\.,][0-9]{2})?)/i;
+      const trailingRegex = /([0-9]{1,3}(?:[,\.][0-9]{3})*(?:[\.,][0-9]{2})?)\s*(?:USD|EUR|GBP)/i;
+      const match = currencyRegex.exec(note) || trailingRegex.exec(note) || note.match(/([0-9]+(?:[\.,][0-9]{2})?)/);
+      if (match?.[1]) {
+        const normalized = match[1].replace(/,/g, "");
+        const parsed = Number(normalized);
+        if (Number.isFinite(parsed)) budgetValue = parsed;
+      }
+    }
+
+    if (budgetValue !== null) {
+      activity.budget = budgetValue;
+    }
+
     return NextResponse.json({ activity });
   } catch (error) {
     const authResponse = handleAuthError(error);

@@ -758,6 +758,7 @@ export function TripDashboard({
             ? String(activity.budget)
             : prev.budget,
       }));
+      setTitleSuggestEnabled(false);
       if (typeof activity.type === "string" && activity.type.toLowerCase() === "hotel") {
         setIsHotelActivity(true);
       }
