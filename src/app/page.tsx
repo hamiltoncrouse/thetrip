@@ -1,103 +1,90 @@
 import Link from "next/link";
 import { clientEnv } from "@/lib/env";
 
-const features = [
+const manifestoCards = [
   {
-    title: "Neon Route Generator",
-    emoji: "🌌",
-    description: "Gemini riffs on your vibe, time of day, and favorite neighborhoods to sketch cinematic days in seconds.",
+    title: "VISUALS > CELLS",
+    body:
+      "Stop pasting reservation numbers into Excel. We hold your tickets, confirmations, and addresses in a visual timeline that actually looks like your trip feels.",
   },
   {
-    title: "Trance Travel Timing",
-    emoji: "🚀",
-    description: "Psychedelic dashboards warn when transfers get sketchy and suggest smoother departure windows.",
+    title: "ASK FONDA",
+    body:
+      "Meet your neon-soaked travel consultant. Stuck on where to eat? Need a route fix? Fonda riffs on your itinerary to find hidden gems and vibe-matched spots instantly.",
   },
   {
-    title: "Hotel Mood Board",
-    emoji: "🛎️",
-    description: "Tap into live Amadeus + Booking data, filtered by budget and proximity to the scenes you’re chasing.",
-  },
-  {
-    title: "Groovy Copilot",
-    emoji: "🌀",
-    description: "Chat with an assistant that remembers your entire trip, then injects activities directly onto the calendar.",
+    title: "HIVE MIND",
+    body:
+      "Planning solo is boring. Share the link. Let friends vote on spots. Keep everyone on the same wavelength without the endless \"Reply-All\" email chains.",
   },
 ];
 
 export default function HomePage() {
   return (
-    <div className="dayglow-page min-h-screen text-slate-900">
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 pb-24 pt-24">
-        <div className="absolute left-1/2 top-4 -z-10 h-64 w-64 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_30%_20%,rgba(255,71,218,0.4),transparent_60%)] blur-3xl" />
-        <header className="space-y-6 text-center">
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-600">{clientEnv.NEXT_PUBLIC_APP_NAME}</p>
-          <h1 className="text-4xl font-semibold tracking-tight text-slate-900 drop-shadow-[0_10px_35px_rgba(255,71,218,0.15)] sm:text-6xl">
-            <span className="bg-gradient-to-r from-[#ff47da] via-[#66f6ff] to-[#ffb347] bg-clip-text text-transparent">
-              The Trip
-            </span>{" "}
-            planner for a cinematic adventure anywhere on earth
-          </h1>
-          <p className="mx-auto max-w-2xl text-lg text-slate-700">
-            Neon gradients, AI riffs, and live data merge into a planner that feels like a midnight road movie: wild,
-            expressive, and orchestrated just for you.
-          </p>
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href="/dashboard" className="psychedelic-button inline-flex items-center justify-center rounded-full px-8 py-3">
-              Launch The Trip Planner
-            </Link>
-            <a
-              href="https://en.wikipedia.org/wiki/Psychedelia"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center rounded-full border border-slate-400 px-8 py-3 text-slate-900 transition hover:border-slate-600"
-            >
-              Explore the aesthetic
-            </a>
-          </div>
+    <div className="min-h-screen bg-paper text-dayglo-void">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-16">
+        <header className="space-y-4 text-center">
+          <p className="text-xs font-black uppercase tracking-[0.35em] text-dayglo-pink">{clientEnv.NEXT_PUBLIC_APP_NAME}</p>
+          <h1 className="text-5xl font-black uppercase text-dayglo-void sm:text-6xl">KILL THE SPREADSHEET.</h1>
+          <h2 className="mx-auto max-w-3xl text-lg font-semibold uppercase text-dayglo-void">
+            Travel is a vibe, not a grid of cells. Plan visually, route intelligently, and keep the chaos under control.
+          </h2>
         </header>
 
-        <section className="grid gap-6 md:grid-cols-2">
-          {features.map((feature) => (
-            <article key={feature.title} className="psychedelic-card rounded-2xl p-6 text-slate-900 shadow-xl">
-              <div className="flex items-center gap-3 text-2xl">
-                <span>{feature.emoji}</span>
-                <h3 className="text-xl font-semibold text-slate-900">{feature.title}</h3>
-              </div>
-              <p className="mt-2 text-sm text-slate-700">{feature.description}</p>
+        <section className="grid gap-4 md:grid-cols-3">
+          <ActionCard
+            href="/dashboard"
+            label="START A NEW TRIP"
+            subtext="Drop a pin. Pick a date. Go."
+            accent="bg-dayglo-lime"
+          />
+          <ActionCard
+            href="/dashboard"
+            label="JUMP BACK IN"
+            subtext="Resume planning where you left off."
+            accent="bg-dayglo-cyan"
+          />
+          <ActionCard
+            href="/dashboard"
+            label="THE TIMELINE"
+            subtext="Bird’s eye view of your logistics."
+            accent="bg-dayglo-pink"
+          />
+        </section>
+
+        <section className="grid gap-6 md:grid-cols-3">
+          {manifestoCards.map((card) => (
+            <article key={card.title} className="rounded-lg border-2 border-dayglo-void bg-white p-5 shadow-hard">
+              <h3 className="text-xl font-black uppercase text-dayglo-void">{card.title}</h3>
+              <p className="data-mono mt-3 text-sm text-dayglo-void">{card.body}</p>
             </article>
           ))}
         </section>
-
-        <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#2b0351]/80 to-[#06021f]/90 p-8 shadow-2xl">
-          <div className="space-y-3">
-            <p className="text-sm uppercase tracking-[0.4em] text-slate-200">Stack Preview</p>
-            <h2 className="text-2xl font-semibold text-white">Render + Postgres + Gemini ready</h2>
-            <p className="text-slate-200">
-              This repo already speaks the same language as your IdealHome deployment: Prisma for schema
-              management, Next.js Route Handlers as the secure API surface, and a Gemini proxy pattern that keeps
-              secrets server-side on Render.
-            </p>
-          </div>
-          <dl className="mt-8 grid gap-4 text-sm text-slate-300 sm:grid-cols-2">
-            <div>
-              <dt className="text-slate-500">Default Home Base</dt>
-              <dd className="text-white">{clientEnv.NEXT_PUBLIC_DEFAULT_HOME_CITY}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Database</dt>
-              <dd className="text-white">Managed Postgres via Prisma</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">AI Providers</dt>
-              <dd className="text-white">Gemini (primary), OpenAI optional</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Deploy Target</dt>
-              <dd className="text-white">Render Web Service + cron hooks</dd>
-            </div>
-          </dl>
-        </section>
       </div>
     </div>
+  );
+}
+
+function ActionCard({
+  href,
+  label,
+  subtext,
+  accent,
+}: {
+  href: string;
+  label: string;
+  subtext: string;
+  accent: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`group flex h-full flex-col justify-between rounded-lg border-2 border-dayglo-void bg-paper p-5 shadow-hard transition hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_#050505]`}
+    >
+      <span className={`inline-flex w-fit rounded-md border-2 border-dayglo-void px-3 py-1 text-xs font-black uppercase tracking-[0.3em] text-dayglo-void ${accent}`}>
+        {label}
+      </span>
+      <p className="data-mono mt-4 text-sm text-dayglo-void">{subtext}</p>
+    </Link>
   );
 }
