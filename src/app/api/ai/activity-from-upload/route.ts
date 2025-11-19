@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     const prompt = `Extract trip activity details from this confirmation. Return valid JSON matching this schema:
 {"title":"string","notes":"string","location":"string","startLocation":"string","type":"string","startTime":"HH:MM","endTime":"HH:MM","budget":number}
-Use 24-hour HH:MM times. Omit fields you cannot find by setting them to empty strings. Title should be short.`;
+Use 24-hour HH:MM times. If you see confirmation numbers or itinerary references, include them in the notes string along with any contextual description. If a total price appears, set budget to the numeric amount (no currency symbols). Omit fields you cannot find by setting them to empty strings. Title should be short.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

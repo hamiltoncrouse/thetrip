@@ -1871,11 +1871,11 @@ export function TripDashboard({
                           <button
                             type="button"
                             onClick={() => activityUploadInputRef.current?.click()}
-                            title="Upload a confirmation screenshot or PDF"
+                            title="Upload a screenshot from your email and auto-populate details"
                             className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-2 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard-sm transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
                             disabled={activityUploadLoading}
                           >
-                            {activityUploadLoading ? "Scanning..." : "Scan confirmation"}
+                            {activityUploadLoading ? "Scanning..." : "Upload screenshot"}
                           </button>
                         </div>
                         <input
@@ -1921,6 +1921,9 @@ export function TripDashboard({
                         {activityUploadError && (
                           <p className="text-[11px] text-rose-500">{activityUploadError}</p>
                         )}
+                        <p className="text-[11px] text-dayglo-void/70">
+                          Tip: Snap a confirmation screenshot to auto-fill the form.
+                        </p>
                       </div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
