@@ -14,6 +14,7 @@ const updateActivitySchema = z.object({
   startLocation: z.string().optional(),
   type: z.string().min(1).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
+  budget: z.coerce.number().nonnegative().optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -86,6 +87,7 @@ export async function PATCH(
     if (parsed.data.startLocation !== undefined) updates.startLocation = parsed.data.startLocation || null;
     if (parsed.data.type !== undefined) updates.type = parsed.data.type || null;
     if (parsed.data.metadata !== undefined) updates.metadata = parsed.data.metadata ?? undefined;
+    if (parsed.data.budget !== undefined) updates.budget = parsed.data.budget ?? null;
 
     if (parsed.data.startTime) {
       const value = combineDateWithTime(existing.tripDay.date, parsed.data.startTime);

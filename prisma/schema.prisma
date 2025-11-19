@@ -93,6 +93,7 @@ model Activity {
   travelDurationSeconds Int?
   travelSummary        String?
   travelPolyline       String?
+  budget              Decimal? @db.Decimal(10, 2)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

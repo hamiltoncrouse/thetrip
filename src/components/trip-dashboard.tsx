@@ -24,6 +24,7 @@ type Activity = {
   type?: string | null;
   metadata?: Record<string, unknown> | null;
   source?: string | null;
+  budget?: number | string | null;
 };
 
 type HotelActivityMetadata = {
@@ -114,6 +115,7 @@ const emptyActivityForm = {
   notes: "",
   location: "",
   startLocation: "",
+  budget: "",
 };
 
 const initialChat: ChatMessage[] = [
@@ -228,6 +230,31 @@ export function TripDashboard({
     return base;
   }, [idToken]);
 
+  const currencyFormatter = useMemo(
+    () => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }),
+    [],
+  );
+
+  const parseBudgetInput = (value: string) => {
+    if (!value.trim()) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const formatBudget = (value?: number | null) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return null;
+    return currencyFormatter.format(value);
+  };
+
+  const getActivityBudgetValue = (activity: Activity) => {
+    if (typeof activity.budget === "number") return activity.budget;
+    if (typeof activity.budget === "string" && activity.budget.trim()) {
+      const parsed = Number(activity.budget);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
   const headline = useMemo(() => {
     if (!isAuthenticated) return firebaseConfigured ? "Sign in to start" : "Configure Firebase";
     if (!trips.length) return "Create your first trip";
@@ -300,6 +327,7 @@ export function TripDashboard({
   const calendarEvent = calendarDay?.activities?.find((activity) => activity.id === calendarEventId) || null;
   const calendarHotels = calendarDay?.activities?.filter((activity) => activity.type === "hotel") || [];
   const calendarEventHotel = calendarEvent ? getHotelMetadata(calendarEvent) : null;
+  const calendarEventBudgetValue = calendarEvent ? formatBudget(getActivityBudgetValue(calendarEvent)) : null;
 
   const dayByDateKey = useMemo(() => {
     const map: Record<string, TripDay> = {};
@@ -560,6 +588,7 @@ export function TripDashboard({
     }
     setSavingActivity(true);
     setTripError(null);
+    const budgetValue = parseBudgetInput(activityForm.budget);
     const payload = {
       title: activityForm.title,
       startTime: activityForm.startTime,
@@ -569,6 +598,7 @@ export function TripDashboard({
       startLocation: activityForm.startLocation || undefined,
       type: isHotelActivity ? "hotel" : undefined,
       metadata: isHotelActivity ? { kind: "hotel", nights: hotelStayNights } : undefined,
+      budget: budgetValue,
     };
 
     try {
@@ -596,6 +626,7 @@ export function TripDashboard({
                 kind: "hotel",
                 nights: hotelStayNights,
                 night: index + 1,
+                ...(payload.metadata || {}),
               },
             }),
           });
@@ -716,6 +747,7 @@ export function TripDashboard({
       notes: activity.description || "",
       location: activity.location || "",
       startLocation: activity.startLocation || "",
+      budget: activity.budget ? String(activity.budget) : "",
     });
     setIsHotelActivity(Boolean(hotelMeta));
     setHotelStayNights(hotelMeta?.nights && hotelMeta.nights > 0 ? hotelMeta.nights : 1);
@@ -1436,6 +1468,15 @@ export function TripDashboard({
                               {activity.location && (
                                 <p className="text-xs text-dayglo-void/80">{activity.location}</p>
                               )}
+                              {(() => {
+                                const budgetValue = getActivityBudgetValue(activity);
+                                if (budgetValue === null) return null;
+                                return (
+                                  <p className="data-mono text-[11px] text-dayglo-void">
+                                    Budget {formatBudget(budgetValue)}
+                                  </p>
+                                );
+                              })()}
                             </button>
                           ))
                         ) : (
@@ -1478,6 +1519,9 @@ export function TripDashboard({
                                 </a>
                               )}
                             </div>
+                          )}
+                          {calendarEventBudgetValue && (
+                            <p className="data-mono text-xs text-dayglo-void">Budget {calendarEventBudgetValue}</p>
                           )}
                           {calendarEvent.description && (
                             <p className="text-sm text-dayglo-void">{calendarEvent.description}</p>
@@ -1659,6 +1703,7 @@ export function TripDashboard({
                           <ol className="space-y-2">
                             {orderedActivities.map((activity) => {
                               const hotelMeta = getHotelMetadata(activity);
+                              const budgetValue = getActivityBudgetValue(activity);
                               return (
                                 <li
                                   key={activity.id}
@@ -1691,6 +1736,11 @@ export function TripDashboard({
                                       )}
                                       {activity.travelSummary && (
                                         <p className="text-xs font-semibold text-dayglo-lime">{activity.travelSummary}</p>
+                                      )}
+                                      {budgetValue !== null && (
+                                        <p className="data-mono text-xs text-dayglo-void">
+                                          Budget {formatBudget(budgetValue)}
+                                        </p>
                                       )}
                                       {activity.startLocation && activity.location && (
                                         <a
@@ -1868,6 +1918,21 @@ export function TripDashboard({
                           onChange={(e) => setActivityForm((prev) => ({ ...prev, startLocation: e.target.value }))}
                           className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                           placeholder="Hotel de Ville"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-fuchsia-500" htmlFor="activityBudget">
+                          Budget (optional)
+                        </label>
+                        <input
+                          id="activityBudget"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={activityForm.budget}
+                          onChange={(e) => setActivityForm((prev) => ({ ...prev, budget: e.target.value }))}
+                          className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                          placeholder="e.g. 120"
                         />
                       </div>
                         <div className="flex flex-wrap gap-2">
