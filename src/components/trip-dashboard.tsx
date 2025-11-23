@@ -183,7 +183,9 @@ export function TripDashboard({
   const [dayForm, setDayForm] = useState(emptyDayForm);
   const [savingDay, setSavingDay] = useState(false);
   const [activityForm, setActivityForm] = useState(emptyActivityForm);
+  const [activityDayId, setActivityDayId] = useState<string | null>(null);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  const [editingActivityOriginalDayId, setEditingActivityOriginalDayId] = useState<string | null>(null);
   const [savingActivity, setSavingActivity] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
   const [chatInput, setChatInput] = useState("");
@@ -429,7 +431,9 @@ export function TripDashboard({
     if (selectedDay) {
       setDayForm({ city: selectedDay.city, notes: selectedDay.notes || "" });
       setEditingActivityId(null);
+      setEditingActivityOriginalDayId(null);
       setActivityForm(emptyActivityForm);
+      setActivityDayId(selectedDay.id);
       setIsHotelActivity(false);
       setHotelStayNights(1);
       setCityQuery(dayPlaces[selectedDay.id]?.description || selectedDay.city || "");
@@ -440,6 +444,8 @@ export function TripDashboard({
       setCityQuery("");
       setHotelResults([]);
       setHotelError(null);
+      setActivityDayId(null);
+      setEditingActivityOriginalDayId(null);
     }
   }, [selectedDay, dayPlaces]);
 
@@ -630,8 +636,19 @@ export function TripDashboard({
 
   async function saveActivity(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedTrip || !selectedDay || !activityForm.title || !activityForm.startTime) {
-      setTripError("Title and start time are required to save an activity.");
+    const targetDayId = activityDayId ?? selectedDay?.id ?? null;
+    if (!selectedTrip || !targetDayId || !activityForm.title || !activityForm.startTime) {
+      setTripError("Select a day and provide a title and start time.");
+      return;
+    }
+    const targetDay = selectedTrip.days.find((day) => day.id === targetDayId);
+    if (!targetDay) {
+      setTripError("Pick a valid trip day for this activity.");
+      return;
+    }
+    const originalDayId = editingActivityOriginalDayId ?? selectedDay?.id ?? null;
+    if (editingActivityId && !originalDayId) {
+      setTripError("Could not determine the original day for this activity.");
       return;
     }
     setSavingActivity(true);
@@ -653,7 +670,7 @@ export function TripDashboard({
       const daysSorted = [...selectedTrip.days].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
       );
-      const startIndex = daysSorted.findIndex((day) => day.id === selectedDay.id);
+      const startIndex = daysSorted.findIndex((day) => day.id === targetDayId);
 
       // If user marks multi-night hotel, create one activity per night across consecutive days.
       if (isHotelActivity && hotelStayNights > 1 && !editingActivityId) {
@@ -701,45 +718,61 @@ export function TripDashboard({
               : trip,
           ),
         );
+        setSelectedDayId(targetDayId);
+        setActivityDayId(targetDayId);
       } else {
         const endpoint = editingActivityId
-          ? `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities/${editingActivityId}`
-          : `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`;
+          ? `/api/trips/${selectedTrip.id}/days/${originalDayId}/activities/${editingActivityId}`
+          : `/api/trips/${selectedTrip.id}/days/${targetDayId}/activities`;
         const res = await fetch(endpoint, {
           method: editingActivityId ? "PATCH" : "POST",
           headers: jsonHeaders,
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            ...payload,
+            dayId: editingActivityId && originalDayId !== targetDayId ? targetDayId : undefined,
+          }),
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body?.error || `Failed to save activity (${res.status})`);
         }
         const data = await res.json();
+        const updatedActivity = data.activity as Activity;
+        const destinationDayId = updatedActivity.tripDayId;
+        const sourceDayId = editingActivityId ? originalDayId : destinationDayId;
         setTrips((prev) =>
           prev.map((trip) =>
             trip.id === selectedTrip.id
               ? {
                   ...trip,
-                  days: trip.days.map((day) =>
-                    day.id === selectedDay.id
-                      ? {
-                          ...day,
-                          activities: editingActivityId
-                            ? day.activities?.map((activity) =>
-                                activity.id === data.activity.id ? data.activity : activity,
-                              )
-                            : [...(day.activities || []), data.activity],
-                        }
-                      : day,
-                  ),
+                  days: trip.days.map((day) => {
+                    if (day.id === destinationDayId) {
+                      const others = (day.activities || []).filter((activity) => activity.id !== updatedActivity.id);
+                      const nextActivities = [...others, updatedActivity].sort(
+                        (a, b) =>
+                          new Date(a.startTime || 0).getTime() - new Date(b.startTime || 0).getTime(),
+                      );
+                      return { ...day, activities: nextActivities };
+                    }
+                    if (editingActivityId && sourceDayId && day.id === sourceDayId && sourceDayId !== destinationDayId) {
+                      return {
+                        ...day,
+                        activities: (day.activities || []).filter((activity) => activity.id !== updatedActivity.id),
+                      };
+                    }
+                    return day;
+                  }),
                 }
               : trip,
           ),
         );
+        setSelectedDayId(destinationDayId);
+        setActivityDayId(destinationDayId);
       }
 
       setActivityForm(emptyActivityForm);
       setEditingActivityId(null);
+      setEditingActivityOriginalDayId(null);
       setIsHotelActivity(false);
       setHotelStayNights(1);
     } catch (err) {
@@ -840,6 +873,8 @@ export function TripDashboard({
 
   function handleEditActivity(activity: Activity) {
     setEditingActivityId(activity.id);
+    setEditingActivityOriginalDayId(activity.tripDayId);
+    setActivityDayId(activity.tripDayId);
     const hotelMeta = getHotelMetadata(activity);
     setActivityForm({
       title: activity.title,
@@ -856,7 +891,9 @@ export function TripDashboard({
 
   function cancelActivityEdit() {
     setEditingActivityId(null);
+    setEditingActivityOriginalDayId(null);
     setActivityForm(emptyActivityForm);
+    setActivityDayId(selectedDay?.id ?? null);
     setIsHotelActivity(false);
     setHotelStayNights(1);
   }
@@ -1902,7 +1939,7 @@ export function TripDashboard({
                             </p>
                           )}
                           {calendarEvent.travelSummary && (
-                            <p className="text-sm font-semibold text-dayglo-lime">{calendarEvent.travelSummary}</p>
+                            <p className="text-sm font-semibold text-dayglo-void">{calendarEvent.travelSummary}</p>
                           )}
                           <div className="overflow-hidden rounded-xl border-2 border-dayglo-void shadow-hard-sm">
                             {calendarEvent.location ? (
@@ -2100,7 +2137,7 @@ export function TripDashboard({
                                         <p className="text-xs text-dayglo-void/70">Starts at {activity.startLocation}</p>
                                       )}
                                       {activity.travelSummary && (
-                                        <p className="text-xs font-semibold text-dayglo-lime">{activity.travelSummary}</p>
+                                        <p className="text-xs font-semibold text-dayglo-void">{activity.travelSummary}</p>
                                       )}
                                       {budgetValue !== null && (
                                         <p className="data-mono text-xs text-dayglo-void">
@@ -2222,7 +2259,7 @@ export function TripDashboard({
                           Tip: Snap a confirmation screenshot to auto-fill the form.
                         </p>
                       </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-3 sm:grid-cols-2">
                           <div>
                             <label className="text-xs text-fuchsia-500" htmlFor="startTime">
                               Start
@@ -2249,6 +2286,25 @@ export function TripDashboard({
                             />
                           </div>
                         </div>
+                      {selectedTrip && (
+                        <div>
+                          <label className="text-xs text-fuchsia-500" htmlFor="activityDay">
+                            Day
+                          </label>
+                          <select
+                            id="activityDay"
+                            value={activityDayId ?? selectedDay?.id ?? ""}
+                            onChange={(event) => setActivityDayId(event.target.value || null)}
+                            className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                          >
+                            {selectedTrip.days.map((day) => (
+                              <option key={day.id} value={day.id}>
+                                {format(new Date(day.date), "EEE, MMM d")} — {day.city}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white/60 px-3 py-2">
                         <label className="flex items-center gap-2 text-xs font-semibold text-slate-800">
                           <input

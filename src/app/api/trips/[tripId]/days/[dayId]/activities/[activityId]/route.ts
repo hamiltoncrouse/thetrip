@@ -10,6 +10,7 @@ const updateActivitySchema = z.object({
   notes: z.string().optional(),
   startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  dayId: z.string().min(1).optional(),
   location: z.string().optional(),
   startLocation: z.string().optional(),
   type: z.string().min(1).optional(),
@@ -25,7 +26,7 @@ function handleAuthError(error: unknown) {
 }
 
 function combineDateWithTime(dateValue: string | Date, time: string) {
-  const [hours, minutes] = time.split(":" ).map((value) => Number.parseInt(value, 10));
+  const [hours, minutes] = time.split(":").map((value) => Number.parseInt(value, 10));
   if (Number.isNaN(hours) || Number.isNaN(minutes)) {
     return null;
   }
@@ -59,6 +60,11 @@ async function assertOwnership(
   });
 }
 
+function extractTimeString(value?: Date | null) {
+  if (!value) return null;
+  return value.toISOString().slice(11, 16);
+}
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ tripId: string; dayId: string; activityId: string }> },
@@ -80,6 +86,17 @@ export async function PATCH(
       return NextResponse.json({ error: "Activity not found" }, { status: 404 });
     }
 
+    let targetDay = existing.tripDay;
+    if (parsed.data.dayId && parsed.data.dayId !== existing.tripDayId) {
+      const destination = await prisma.tripDay.findFirst({
+        where: { id: parsed.data.dayId, tripId, trip: { userId: account.id } },
+      });
+      if (!destination) {
+        return NextResponse.json({ error: "Target day not found" }, { status: 404 });
+      }
+      targetDay = destination;
+    }
+
     const updates: Record<string, unknown> = {};
     if (parsed.data.title !== undefined) updates.title = parsed.data.title;
     if (parsed.data.notes !== undefined) updates.description = parsed.data.notes;
@@ -90,14 +107,23 @@ export async function PATCH(
     if (parsed.data.budget !== undefined) updates.budget = parsed.data.budget ?? null;
 
     if (parsed.data.startTime) {
-      const value = combineDateWithTime(existing.tripDay.date, parsed.data.startTime);
+      const value = combineDateWithTime(targetDay.date, parsed.data.startTime);
       if (!value) return NextResponse.json({ error: "Invalid start time" }, { status: 400 });
       updates.startTime = value;
+    } else if (parsed.data.dayId && parsed.data.dayId !== existing.tripDayId && existing.startTime) {
+      const current = extractTimeString(existing.startTime);
+      const value = current ? combineDateWithTime(targetDay.date, current) : null;
+      if (value) updates.startTime = value;
     }
+
     if (parsed.data.endTime) {
-      const value = combineDateWithTime(existing.tripDay.date, parsed.data.endTime);
+      const value = combineDateWithTime(targetDay.date, parsed.data.endTime);
       if (!value) return NextResponse.json({ error: "Invalid end time" }, { status: 400 });
       updates.endTime = value;
+    } else if (parsed.data.dayId && parsed.data.dayId !== existing.tripDayId && existing.endTime) {
+      const current = extractTimeString(existing.endTime);
+      const value = current ? combineDateWithTime(targetDay.date, current) : null;
+      if (value) updates.endTime = value;
     }
 
     if (updates.endTime && updates.startTime && updates.endTime < updates.startTime) {
@@ -121,6 +147,10 @@ export async function PATCH(
         updates.travelSummary = null;
         updates.travelPolyline = null;
       }
+    }
+
+    if (targetDay.id !== existing.tripDayId) {
+      updates.tripDayId = targetDay.id;
     }
 
     const updated = await prisma.activity.update({ where: { id: activityId }, data: updates });
