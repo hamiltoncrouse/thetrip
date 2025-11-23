@@ -275,8 +275,16 @@ export function TripDashboard({
     return null;
   };
 
-  const sortDaysByDate = (days: TripDay[]) =>
-    [...days].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+const sortDaysByDate = (days: TripDay[]) =>
+  [...days].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+const sortActivitiesByStart = (activities: Activity[]) =>
+  [...activities].sort((a, b) => {
+    const aTime = a.startTime ? new Date(a.startTime).getTime() : Number.MAX_SAFE_INTEGER;
+    const bTime = b.startTime ? new Date(b.startTime).getTime() : Number.MAX_SAFE_INTEGER;
+    if (aTime !== bTime) return aTime - bTime;
+    return a.title.localeCompare(b.title);
+  });
 
   async function fileToBase64(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -315,7 +323,14 @@ export function TripDashboard({
           throw new Error(body?.error || `Failed to load trips (${res.status})`);
         }
         const data: TripsResponse = await res.json();
-        setTrips(data.trips || []);
+        const normalized = (data.trips || []).map((trip) => ({
+          ...trip,
+          days: sortDaysByDate(trip.days || []).map((day) => ({
+            ...day,
+            activities: sortActivitiesByStart(day.activities || []),
+          })),
+        }));
+        setTrips(normalized);
         const placeEntries: DayPlaceLookup = {};
         data.trips?.forEach((trip) => {
           trip.days.forEach((day) => {
@@ -711,7 +726,7 @@ export function TripDashboard({
                   days: trip.days.map((day) => {
                     const newActivities = created.filter((item) => item.tripDayId === day.id);
                     return newActivities.length
-                      ? { ...day, activities: [...(day.activities || []), ...newActivities] }
+                      ? { ...day, activities: sortActivitiesByStart([...(day.activities || []), ...newActivities]) }
                       : day;
                   }),
                 }
@@ -748,10 +763,7 @@ export function TripDashboard({
                   days: trip.days.map((day) => {
                     if (day.id === destinationDayId) {
                       const others = (day.activities || []).filter((activity) => activity.id !== updatedActivity.id);
-                      const nextActivities = [...others, updatedActivity].sort(
-                        (a, b) =>
-                          new Date(a.startTime || 0).getTime() - new Date(b.startTime || 0).getTime(),
-                      );
+                      const nextActivities = sortActivitiesByStart([...others, updatedActivity]);
                       return { ...day, activities: nextActivities };
                     }
                     if (editingActivityId && sourceDayId && day.id === sourceDayId && sourceDayId !== destinationDayId) {
@@ -1038,7 +1050,7 @@ export function TripDashboard({
                 ...trip,
                 days: trip.days.map((day) =>
                   day.id === selectedDay.id
-                    ? { ...day, activities: [...(day.activities || []), data.activity] }
+                    ? { ...day, activities: sortActivitiesByStart([...(day.activities || []), data.activity]) }
                     : day,
                 ),
               }
