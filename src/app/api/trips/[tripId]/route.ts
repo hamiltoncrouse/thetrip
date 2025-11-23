@@ -15,7 +15,9 @@ const updateTripSchema = z.object({
 function parseDateInput(value?: string) {
   if (!value) return undefined;
   const parsed = new Date(value);
-  return Number.isNaN(parsed.valueOf()) ? undefined : parsed;
+  if (Number.isNaN(parsed.valueOf())) return undefined;
+  parsed.setUTCHours(12, 0, 0, 0);
+  return parsed;
 }
 
 function handleAuthError(error: unknown) {

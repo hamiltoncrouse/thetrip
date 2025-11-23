@@ -13,10 +13,16 @@ const createTripSchema = z.object({
 
 const DEFAULT_CITY = "Paris";
 
+function toNoonUtc(date: Date) {
+  const copy = new Date(date);
+  copy.setUTCHours(12, 0, 0, 0);
+  return copy;
+}
+
 function normalizeDate(value?: string | null) {
   if (!value) return null;
   const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? null : date;
+  return Number.isNaN(date.valueOf()) ? null : toNoonUtc(date);
 }
 
 function buildDayEntries(startDate?: string, endDate?: string, city?: string) {
@@ -24,15 +30,15 @@ function buildDayEntries(startDate?: string, endDate?: string, city?: string) {
   const parsedEnd = normalizeDate(endDate);
 
   // Fall back to whichever date we have, and finally to "today" so new trips always have at least one day.
-  const rangeStart = parsedStart ?? parsedEnd ?? new Date();
+  const rangeStart = parsedStart ?? parsedEnd ?? toNoonUtc(new Date());
   const rangeEnd = parsedEnd ?? parsedStart ?? rangeStart;
   const dayCity = city || DEFAULT_CITY;
 
   const days = [] as { date: Date; city: string }[];
   const cursor = new Date(rangeStart);
   while (cursor <= rangeEnd) {
-    days.push({ date: new Date(cursor), city: dayCity });
-    cursor.setDate(cursor.getDate() + 1);
+    days.push({ date: toNoonUtc(cursor), city: dayCity });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return days;
 }
@@ -117,8 +123,8 @@ export async function POST(req: Request) {
         title,
         description,
         homeCity,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate ? normalizeDate(startDate) : null,
+        endDate: endDate ? normalizeDate(endDate) : null,
         userId: account.id,
         days: {
           create: dayEntries,

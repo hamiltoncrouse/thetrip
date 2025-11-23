@@ -22,7 +22,9 @@ function handleAuthError(error: unknown) {
 
 function parseDate(value: string) {
   const parsed = new Date(value);
-  return Number.isNaN(parsed.valueOf()) ? null : parsed;
+  if (Number.isNaN(parsed.valueOf())) return null;
+  parsed.setUTCHours(12, 0, 0, 0);
+  return parsed;
 }
 
 export async function POST(
