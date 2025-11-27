@@ -146,6 +146,37 @@ const formatTimeRange = (activity: Activity) => {
   return end ? `${start} – ${end}` : start;
 };
 
+const buildTripContext = (trip: Trip | null, day: TripDay | null) => {
+  if (!trip) return "";
+  const parts: string[] = [];
+  parts.push(`Trip "${trip.title}"${trip.homeCity ? ` (home: ${trip.homeCity})` : ""}`);
+  if (day) {
+    parts.push(`Current day: ${day.city}${day.date ? ` on ${day.date}` : ""}`);
+    const planned = (day.activities || [])
+      .slice(0, 6)
+      .map((activity) => {
+        const start = activity.startTime ? formatTime(activity.startTime) : null;
+        const end = activity.endTime ? formatTime(activity.endTime) : null;
+        const timeRange = start ? `${start}${end ? `-${end}` : ""}` : "";
+        const location = activity.location ? ` @ ${activity.location}` : "";
+        const label = activity.title || "Activity";
+        return `${timeRange ? `${timeRange} ` : ""}${label}${location}`.trim();
+      })
+      .filter(Boolean)
+      .join("; ");
+    if (planned) {
+      parts.push(`Today: ${planned}`);
+    }
+  }
+  const otherStops = Array.from(
+    new Set(trip.days.map((entry) => entry.city).filter((city) => city && city !== day?.city)),
+  );
+  if (otherStops.length) {
+    parts.push(`Other stops: ${otherStops.join(", ")}`);
+  }
+  return parts.join(". ");
+};
+
 const getHotelMetadata = (activity: Activity): HotelActivityMetadata | null => {
   if (activity.type !== "hotel") return null;
   const meta = (activity.metadata || {}) as Record<string, unknown>;
@@ -1253,6 +1284,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
     event.preventDefault();
     if (!chatInput.trim() || !isAuthenticated) return;
     const trimmed = chatInput.trim();
+    const tripContext = buildTripContext(selectedTrip, selectedDay);
     setChatMessages((prev) => [...prev, { id: randomId(), role: "user", text: trimmed }]);
     setChatInput("");
     setChatLoading(true);
@@ -1267,6 +1299,8 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           city: selectedDay?.city || selectedTrip?.homeCity || "your current locale",
           day: selectedDay?.date,
           interests: [trimmed],
+          message: trimmed,
+          tripContext,
         }),
       });
       const data = await res.json().catch(() => ({}));

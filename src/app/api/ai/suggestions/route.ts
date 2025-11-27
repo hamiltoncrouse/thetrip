@@ -7,6 +7,8 @@ const suggestionSchema = z.object({
   city: z.string().min(1),
   day: z.string().optional(),
   interests: z.array(z.string()).optional(),
+  message: z.string().optional(),
+  tripContext: z.string().optional(),
 });
 
 type Suggestion = {
@@ -34,14 +36,26 @@ const responseSchema = {
   required: ["suggestions"],
 } satisfies Record<string, unknown>;
 
-function buildPrompt(city: string, day?: string, interests: string[] = []) {
+function buildPrompt(
+  city: string,
+  day?: string,
+  interests: string[] = [],
+  message?: string,
+  tripContext?: string,
+) {
   const interestsLine = interests.length ? interests.join(", ") : "surprise me";
+  const requestLine = message?.trim() || interestsLine;
   const dayLine = day ? `The date is ${day}.` : "The traveler didn't specify a date.";
-  return `You are Fonda, a travel-planning copilot. Suggest vivid, specific activities or experiences in ${city}.
-${dayLine} They are interested in ${interestsLine}.
-Keep each suggestion punchy (ideally one sentence).
+  const contextLine = tripContext?.trim()
+    ? `Trip context: ${tripContext.trim()}.`
+    : "Trip context is unknown.";
+  return `You are Fonda, a travel-planning copilot. The traveler is in ${city}. ${dayLine} ${contextLine}
+User request: "${requestLine}".
+- If they ask about a specific place or a prior suggestion (e.g., hours, location, booking), answer directly with concise specifics.
+- Otherwise, propose 1-3 vivid, realistic options that fit their itinerary and cities mentioned, avoiding duplicates of what they already have.
+- Keep each suggestion punchy (ideally one sentence) and actionable.
 Return STRICT JSON matching this schema (no prose): {"suggestions":[{"title":"string","description":"string","suggestedTime":"HH:MM"}]}
-Focus on realistic plans you could add to an itinerary.`;
+Suggestions can be direct answers (title = subject, description = the answer). Use 24-hour times for hours when possible.`;
 }
 
 function parseSuggestions(content?: string): Suggestion[] {
@@ -56,9 +70,15 @@ function parseSuggestions(content?: string): Suggestion[] {
   return [];
 }
 
-async function fetchGeminiSuggestions(city: string, day?: string, interests: string[] = []) {
+async function fetchGeminiSuggestions(
+  city: string,
+  day?: string,
+  interests: string[] = [],
+  message?: string,
+  tripContext?: string,
+) {
   if (!serverEnv.GEMINI_API_KEY) return [];
-  const prompt = buildPrompt(city, day, interests);
+  const prompt = buildPrompt(city, day, interests, message, tripContext);
   const url = new URL(
     `/v1beta/models/${serverEnv.GEMINI_MODEL}:generateContent`,
     "https://generativelanguage.googleapis.com",
@@ -89,9 +109,15 @@ async function fetchGeminiSuggestions(city: string, day?: string, interests: str
   return parseSuggestions(text);
 }
 
-async function fetchOpenAISuggestions(city: string, day?: string, interests: string[] = []) {
+async function fetchOpenAISuggestions(
+  city: string,
+  day?: string,
+  interests: string[] = [],
+  message?: string,
+  tripContext?: string,
+) {
   if (!serverEnv.OPENAI_API_KEY) return [];
-  const prompt = buildPrompt(city, day, interests);
+  const prompt = buildPrompt(city, day, interests, message, tripContext);
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -144,14 +170,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const { city, day, interests = [] } = parsed.data;
+  const { city, day, interests = [], message, tripContext } = parsed.data;
 
   let items: Suggestion[] = [];
   let source: "gemini" | "openai" | "placeholder" | "error" = "placeholder";
   let errorMessage: string | undefined;
 
   try {
-    const geminiSuggestions = await fetchGeminiSuggestions(city, day, interests);
+    const geminiSuggestions = await fetchGeminiSuggestions(city, day, interests, message, tripContext);
     if (geminiSuggestions.length) {
       items = geminiSuggestions;
       source = "gemini";
@@ -164,7 +190,7 @@ export async function POST(req: Request) {
 
   if (!items.length) {
     try {
-      const openaiSuggestions = await fetchOpenAISuggestions(city, day, interests);
+      const openaiSuggestions = await fetchOpenAISuggestions(city, day, interests, message, tripContext);
       if (openaiSuggestions.length) {
         items = openaiSuggestions;
         source = "openai";
