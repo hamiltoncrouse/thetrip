@@ -223,6 +223,8 @@ export function TripDashboard({
   const [chatLoading, setChatLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
+  const [planningDay, setPlanningDay] = useState(false);
+  const [planDayStatus, setPlanDayStatus] = useState<string | null>(null);
   const [hotelResults, setHotelResults] = useState<HotelOption[]>([]);
   const [hotelLoading, setHotelLoading] = useState(false);
   const [hotelError, setHotelError] = useState<string | null>(null);
@@ -329,6 +331,17 @@ const formatHoursLabel = (minutes: number) => {
   if (hours && mins) return `${hours}h ${mins}m`;
   if (hours) return `${hours}h`;
   return `${mins}m`;
+};
+
+const addMinutesToTime = (time: string, minutes: number) => {
+  const [hoursStr, minutesStr] = time.split(":");
+  const hours = Number(hoursStr);
+  const mins = Number(minutesStr);
+  if (!Number.isFinite(hours) || !Number.isFinite(mins)) return time;
+  const total = hours * 60 + mins + minutes;
+  const nextHours = Math.floor((total + 24 * 60) % (24 * 60) / 60);
+  const nextMinutes = (total + 24 * 60) % (24 * 60) % 60;
+  return `${String(nextHours).padStart(2, "0")}:${String(nextMinutes).padStart(2, "0")}`;
 };
 
 const sortDaysByDate = (days: TripDay[]) =>
@@ -1487,6 +1500,107 @@ const sortActivitiesByStart = (activities: Activity[]) =>
     }
   }
 
+  const dayIsOpenForPlan = selectedDay
+    ? (selectedDay.activities || []).filter((activity) => activity.type !== "hotel").length === 0
+    : false;
+
+  async function planDayWithFonda() {
+    if (!selectedTrip || !selectedDay) {
+      setTripError("Select a trip day first.");
+      return;
+    }
+    if (!isAuthenticated) {
+      setTripError("Sign in to let Fonda plan your day.");
+      return;
+    }
+    if (!dayIsOpenForPlan) {
+      setTripError("Day needs to be open (only hotels allowed) before auto-planning.");
+      return;
+    }
+    setPlanningDay(true);
+    setPlanDayStatus(null);
+    setTripError(null);
+    try {
+      const res = await fetch("/api/ai/suggestions", {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          city: selectedDay.city || selectedTrip.homeCity || "your current locale",
+          day: selectedDay.date,
+          interests: [],
+          message: `Plan my day in ${selectedDay.city || "this city"} on ${selectedDay.date}. Return exactly three activities: a morning activity, an afternoon activity, and an evening dinner option. Each should be at least 90 minutes long. Keep titles punchy and include a short description.`,
+          tripContext: buildTripContext(selectedTrip, selectedDay),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const items: Array<{ title?: string; description?: string }> = data.items || [];
+      const topThree = items.slice(0, 3);
+      if (!topThree.length) {
+        throw new Error("No ideas came back. Try again in a moment.");
+      }
+
+      const slots = [
+        { label: "Morning", start: "09:00" },
+        { label: "Afternoon", start: "14:00" },
+        { label: "Evening", start: "19:00" },
+      ];
+
+      const created: Activity[] = [];
+      for (let index = 0; index < Math.min(3, topThree.length); index += 1) {
+        const idea = topThree[index];
+        const slot = slots[index];
+        const title = idea.title ? `${slot.label}: ${idea.title}` : `${slot.label} activity`;
+        const startTime = slot.start;
+        const endTime = addMinutesToTime(startTime, 90);
+        const resActivity = await fetch(
+          `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`,
+          {
+            method: "POST",
+            headers: jsonHeaders,
+            body: JSON.stringify({
+              title,
+              description: idea.description || undefined,
+              startTime,
+              endTime,
+            }),
+          },
+        );
+        if (!resActivity.ok) {
+          const body = await resActivity.json().catch(() => ({}));
+          throw new Error(body?.error || `Failed to add "${title}"`);
+        }
+        const dataActivity = await resActivity.json();
+        created.push(dataActivity.activity as Activity);
+      }
+
+      setTrips((prev) =>
+        prev.map((trip) =>
+          trip.id === selectedTrip.id
+            ? {
+                ...trip,
+                days: trip.days.map((day) =>
+                  day.id === selectedDay.id
+                    ? {
+                        ...day,
+                        activities: sortActivitiesByStart([...(day.activities || []), ...created]),
+                      }
+                    : day,
+                ),
+              }
+            : trip,
+        ),
+      );
+      setPlanDayStatus("Added three activities to your day.");
+      setSelectedDayId(selectedDay.id);
+      setActivityDayId(selectedDay.id);
+    } catch (err) {
+      setPlanDayStatus(null);
+      setTripError(err instanceof Error ? err.message : "Fonda could not plan the day.");
+    } finally {
+      setPlanningDay(false);
+    }
+  }
+
   const chatPanelContent = (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 pb-4">
@@ -1566,6 +1680,20 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         >
           Send to Fonda
         </button>
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={planDayWithFonda}
+            disabled={!isAuthenticated || planningDay || !selectedDay || !dayIsOpenForPlan}
+            className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-cyan py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {planningDay ? "Planning..." : "Plan my day"}
+          </button>
+          <p className="text-[11px] font-semibold text-dayglo-void/70">
+            {dayIsOpenForPlan ? "Auto-adds morning, afternoon, evening ideas." : "Clear the day (except hotels) to auto-plan."}
+          </p>
+          {planDayStatus && <p className="text-[11px] font-black text-dayglo-void">{planDayStatus}</p>}
+        </div>
       </form>
     </div>
   );
