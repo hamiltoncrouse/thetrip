@@ -1609,9 +1609,9 @@ const sortActivitiesByStart = (activities: Activity[]) =>
             <Image
               src="/fonda.png"
               alt="Fonda avatar"
-              width={144}
-              height={144}
-              className="h-32 w-32 rounded-full object-cover sm:h-36 sm:w-36"
+              width={120}
+              height={120}
+              className="h-24 w-24 rounded-full object-cover sm:h-28 sm:w-28"
               priority
             />
           </div>
@@ -1638,9 +1638,26 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           </button>
         </div>
       </div>
+      <div className="space-y-2 pb-3">
+        <button
+          type="button"
+          onClick={planDayWithFonda}
+          disabled={!isAuthenticated || planningDay || !selectedDay || !dayIsOpenForPlan}
+          className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-cyan py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {planningDay ? "Planning..." : "Plan my day"}
+        </button>
+        <p className="text-[11px] font-semibold text-dayglo-void/70">
+          {dayIsOpenForPlan
+            ? "Auto-adds morning, afternoon, evening ideas to this day."
+            : "Clear the day (except hotels) to auto-plan."}
+        </p>
+        {planDayStatus && <p className="text-[11px] font-black text-dayglo-void">{planDayStatus}</p>}
+      </div>
+
       <div
         className="flex-1 overflow-y-auto rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/30 p-4 text-sm shadow-hard"
-        style={{ minHeight: "320px" }}
+        style={{ minHeight: "260px" }}
         role="log"
         aria-live="polite"
         aria-label="Fonda chat history"
@@ -1680,20 +1697,6 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         >
           Send to Fonda
         </button>
-        <div className="space-y-1">
-          <button
-            type="button"
-            onClick={planDayWithFonda}
-            disabled={!isAuthenticated || planningDay || !selectedDay || !dayIsOpenForPlan}
-            className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-cyan py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {planningDay ? "Planning..." : "Plan my day"}
-          </button>
-          <p className="text-[11px] font-semibold text-dayglo-void/70">
-            {dayIsOpenForPlan ? "Auto-adds morning, afternoon, evening ideas." : "Clear the day (except hotels) to auto-plan."}
-          </p>
-          {planDayStatus && <p className="text-[11px] font-black text-dayglo-void">{planDayStatus}</p>}
-        </div>
       </form>
     </div>
   );
@@ -3266,7 +3269,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           <div className="hidden lg:block">
             {isChatOpen ? (
               <aside
-                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-6 shadow-hard ${
+                className={`sticky top-8 flex h-[calc(100vh-8rem)] w-full flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
                   chatExpanded ? "" : ""
                 }`}
               >
