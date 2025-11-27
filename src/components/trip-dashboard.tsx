@@ -1334,9 +1334,9 @@ const sortActivitiesByStart = (activities: Activity[]) =>
             <Image
               src="/fonda.png"
               alt="Fonda avatar"
-              width={100}
-              height={100}
-              className="rounded-full"
+              width={140}
+              height={140}
+              className="rounded-full w-28 h-28 sm:w-32 sm:h-32"
               priority
             />
           </div>
@@ -1374,13 +1374,13 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           {chatMessages.map((message) => (
             <div
               key={message.id}
-              className={`max-w-full rounded-md px-4 py-2 ${
+              className={`max-w-full rounded-md px-4 py-2 whitespace-pre-line leading-relaxed ${
                 message.role === "assistant"
                   ? "self-start border-2 border-dayglo-void bg-white text-dayglo-void shadow-hard-sm"
                   : "self-end border-2 border-dayglo-void bg-dayglo-void text-white shadow-hard-sm"
               }`}
             >
-              {message.text}
+              <p>{message.text}</p>
             </div>
           ))}
         </div>
