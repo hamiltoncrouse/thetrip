@@ -203,7 +203,7 @@ export function TripDashboard({
   initialView = "timeline",
 }: {
   initialTripId?: string | null;
-  initialView?: "timeline" | "calendar";
+  initialView?: "timeline" | "calendar" | "dashboards";
 }) {
   const { status, user, idToken, firebaseConfigured, signInWithGoogle, signOut, error } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -264,7 +264,7 @@ export function TripDashboard({
   const createPlacesToken = () =>
     typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11);
   const [placesSessionToken, setPlacesSessionToken] = useState<string>(createPlacesToken);
-  const [view, setView] = useState<"timeline" | "calendar">(initialView);
+  const [view, setView] = useState<"timeline" | "calendar" | "dashboards">(initialView);
   const router = useRouter();
   const [calendarDayId, setCalendarDayId] = useState<string | null>(null);
   const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
@@ -292,19 +292,44 @@ export function TripDashboard({
     return Number.isFinite(parsed) ? parsed : undefined;
   };
 
-  const formatBudget = (value?: number | null) => {
-    if (value === null || value === undefined || Number.isNaN(value)) return null;
-    return currencyFormatter.format(value);
-  };
+const formatBudget = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  return currencyFormatter.format(value);
+};
 
-  const getActivityBudgetValue = (activity: Activity) => {
+const getActivityBudgetValue = (activity: Activity) => {
     if (typeof activity.budget === "number") return activity.budget;
-    if (typeof activity.budget === "string" && activity.budget.trim()) {
-      const parsed = Number(activity.budget);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-    return null;
-  };
+  if (typeof activity.budget === "string" && activity.budget.trim()) {
+    const parsed = Number(activity.budget);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const isTravelActivity = (activity: Activity) => {
+  const type = (activity.type || "").toLowerCase();
+  const title = (activity.title || "").toLowerCase();
+  if (type.includes("travel") || type.includes("transit") || type.includes("train") || type.includes("flight")) return true;
+  if (title.match(/train|flight|plane|drive|bus|ferry|uber|taxi|transit|transfer/)) return true;
+  return Boolean(activity.travelDistanceMeters || activity.travelDurationSeconds || activity.travelSummary);
+};
+
+const getActivityDurationMinutes = (activity: Activity) => {
+  if (!activity.startTime || !activity.endTime) return 0;
+  const start = new Date(activity.startTime).getTime();
+  const end = new Date(activity.endTime).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  return Math.round((end - start) / 60000);
+};
+
+const formatHoursLabel = (minutes: number) => {
+  if (!minutes) return "0h";
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours && mins) return `${hours}h ${mins}m`;
+  if (hours) return `${hours}h`;
+  return `${mins}m`;
+};
 
 const sortDaysByDate = (days: TripDay[]) =>
   [...days].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -418,6 +443,142 @@ const sortActivitiesByStart = (activities: Activity[]) =>
       map[key] = day;
     });
     return map;
+  }, [selectedTrip]);
+
+  const tripActivities = useMemo(() => {
+    if (!selectedTrip) return [];
+    return selectedTrip.days.flatMap((day) => {
+      const dayLabel = day.date ? format(new Date(day.date), "MMM d") : "Day";
+      return (day.activities || []).map((activity) => ({
+        activity,
+        day,
+        dayLabel,
+        city: day.city,
+      }));
+    });
+  }, [selectedTrip]);
+
+  const budgetStats = useMemo(() => {
+    let total = 0;
+    const buckets: Record<string, number> = {};
+    const categorize = (activity: Activity) => {
+      const title = (activity.title || "").toLowerCase();
+      const type = (activity.type || "").toLowerCase();
+      if (type === "hotel") return "Lodging";
+      if (isTravelActivity(activity)) return "Transport";
+      if (type.includes("food") || title.match(/dinner|lunch|breakfast|brunch|restaurant|cafe|bar|wine|food/))
+        return "Food & drink";
+      if (title.match(/museum|tour|walk|gallery|park|hike|show|concert|abbey|castle|cathedral/)) return "Activities";
+      return "Other";
+    };
+    tripActivities.forEach(({ activity }) => {
+      const value = getActivityBudgetValue(activity);
+      if (value === null || value === undefined) return;
+      total += value;
+      const category = categorize(activity);
+      buckets[category] = (buckets[category] || 0) + value;
+    });
+    const byCategory = Object.entries(buckets)
+      .map(([category, value]) => ({ category, value }))
+      .sort((a, b) => b.value - a.value);
+    return { total, byCategory };
+  }, [tripActivities]);
+
+  const cityStops = useMemo(() => {
+    if (!selectedTrip) {
+      return { ordered: [] as Array<{ city: string; days: string[]; activityCount: number }>, routeLink: null as string | null };
+    }
+    const seen: Record<string, { city: string; days: string[]; activityCount: number }> = {};
+    const order: string[] = [];
+    sortDaysByDate(selectedTrip.days || []).forEach((day) => {
+      const key = day.city || "Unlabeled stop";
+      if (!seen[key]) {
+        seen[key] = { city: key, days: [], activityCount: 0 };
+        order.push(key);
+      }
+      seen[key].days.push(day.date);
+      seen[key].activityCount += day.activities?.length || 0;
+    });
+    const ordered = order.map((city) => seen[city]);
+    const cityNames = ordered.map((entry) => entry.city).filter(Boolean);
+    let routeLink: string | null = null;
+    if (cityNames.length >= 2) {
+      const origin = encodeURIComponent(cityNames[0]);
+      const destination = encodeURIComponent(cityNames[cityNames.length - 1]);
+      const waypoints = cityNames.slice(1, -1).map(encodeURIComponent).join("|");
+      routeLink = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${
+        waypoints ? `&waypoints=${waypoints}` : ""
+      }`;
+    }
+    return { ordered, routeLink };
+  }, [selectedTrip]);
+
+  const travelStats = useMemo(() => {
+    if (!selectedTrip) {
+      return {
+        dayStats: [] as Array<{ day: TripDay; durationSeconds: number; distanceMeters: number }>,
+        totalSeconds: 0,
+        totalMeters: 0,
+      };
+    }
+    const dayStats = selectedTrip.days.map((day) => {
+      const travelActivities = (day.activities || []).filter((activity) => isTravelActivity(activity));
+      const durationSeconds = travelActivities.reduce((sum, activity) => sum + (activity.travelDurationSeconds || 0), 0);
+      const distanceMeters = travelActivities.reduce((sum, activity) => sum + (activity.travelDistanceMeters || 0), 0);
+      return { day, durationSeconds, distanceMeters };
+    });
+    const totalSeconds = dayStats.reduce((sum, stat) => sum + stat.durationSeconds, 0);
+    const totalMeters = dayStats.reduce((sum, stat) => sum + stat.distanceMeters, 0);
+    return { dayStats, totalSeconds, totalMeters };
+  }, [selectedTrip]);
+
+  const topTravelDays = useMemo(
+    () =>
+      travelStats.dayStats
+        .filter((stat) => stat.durationSeconds > 0 || stat.distanceMeters > 0)
+        .sort((a, b) => b.durationSeconds - a.durationSeconds || b.distanceMeters - a.distanceMeters)
+        .slice(0, 3),
+    [travelStats],
+  );
+
+  const coverageStats = useMemo(() => {
+    if (!selectedTrip) return { byCity: [] as Array<{ city: string; planned: number; days: number }> };
+    const map: Record<string, { city: string; planned: number; days: number }> = {};
+    selectedTrip.days.forEach((day) => {
+      const key = day.city || "Unlabeled stop";
+      const current = map[key] || { city: key, planned: 0, days: 0 };
+      current.planned += day.activities?.length || 0;
+      current.days += 1;
+      map[key] = current;
+    });
+    const byCity = Object.values(map).sort((a, b) => b.planned - a.planned);
+    return { byCity };
+  }, [selectedTrip]);
+
+  const scheduleStats = useMemo(() => {
+    if (!selectedTrip) {
+      return {
+        dayStats: [] as Array<{ day: TripDay; minutes: number }>,
+        busiest: null as TripDay | null,
+        lightest: null as TripDay | null,
+        avgMinutes: 0,
+      };
+    }
+    const dayStats = selectedTrip.days.map((day) => {
+      const minutes = (day.activities || []).reduce((sum, activity) => sum + getActivityDurationMinutes(activity), 0);
+      return { day, minutes };
+    });
+    const busiest = dayStats.reduce((prev, curr) => (prev && prev.minutes >= curr.minutes ? prev : curr), dayStats[0] || null);
+    const lightest = dayStats.reduce((prev, curr) => (prev && prev.minutes <= curr.minutes ? prev : curr), dayStats[0] || null);
+    const avgMinutes =
+      dayStats.length > 0 ? Math.round(dayStats.reduce((sum, stat) => sum + stat.minutes, 0) / dayStats.length) : 0;
+    return { dayStats, busiest: busiest?.day ?? null, lightest: lightest?.day ?? null, avgMinutes };
+  }, [selectedTrip]);
+
+  const lodgingStats = useMemo(() => {
+    if (!selectedTrip) return { nightsPlanned: 0, missing: [] as TripDay[] };
+    const missing = selectedTrip.days.filter((day) => !(day.activities || []).some((activity) => activity.type === "hotel"));
+    return { nightsPlanned: selectedTrip.days.length - missing.length, missing };
   }, [selectedTrip]);
 
   const calendarWeeks = useMemo(() => {
@@ -1330,13 +1491,13 @@ const sortActivitiesByStart = (activities: Activity[]) =>
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 pb-4">
         <div className="flex items-center gap-4">
-          <div className="rounded-full border-4 border-dayglo-void bg-white shadow-hard">
+          <div className="flex-shrink-0 rounded-full border-4 border-dayglo-void bg-white shadow-hard">
             <Image
               src="/fonda.png"
               alt="Fonda avatar"
-              width={140}
-              height={140}
-              className="rounded-full w-28 h-28 sm:w-32 sm:h-32"
+              width={144}
+              height={144}
+              className="h-32 w-32 rounded-full object-cover sm:h-36 sm:w-36"
               priority
             />
           </div>
@@ -1549,6 +1710,18 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                     }`}
                   >
                     Calendar
+                  </button>
+                  <button
+                    type="button"
+                    title="View budget, travel, and coverage dashboards"
+                    onClick={() => setView("dashboards")}
+                    className={`rounded-md border-2 px-4 py-2 text-sm font-black uppercase tracking-[0.2em] transition ${
+                      view === "dashboards"
+                        ? "bg-dayglo-lime border-dayglo-void text-dayglo-void shadow-hard"
+                        : "border-dayglo-void text-dayglo-void shadow-hard-sm hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
+                    }`}
+                  >
+                    Dashboards
                   </button>
                   <button
                     type="button"
@@ -2039,6 +2212,235 @@ const sortActivitiesByStart = (activities: Activity[]) =>
             ) : (
               <div className="rounded-lg border-2 border-dashed border-dayglo-void bg-paper p-10 text-center text-dayglo-void/70 shadow-hard">
                 Select or create a trip to view its calendar.
+              </div>
+            )}
+          </section>
+        ) : view === "dashboards" ? (
+          <section className="space-y-6 rounded-lg border-2 border-dayglo-void bg-paper p-6 shadow-hard">
+            {selectedTrip ? (
+              <div className="space-y-5">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Trip dashboards</p>
+                  <h2 className="text-2xl font-black text-dayglo-void">{selectedTrip.title}</h2>
+                  <p className="text-sm font-semibold text-dayglo-void">
+                    {selectedTrip.days.length} day{selectedTrip.days.length === 1 ? "" : "s"} •{" "}
+                    {cityStops.ordered.length} cit{cityStops.ordered.length === 1 ? "y" : "ies"}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="rounded-lg border-2 border-dayglo-void bg-white/80 p-4 shadow-hard-sm">
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-dayglo-pink">Budget</p>
+                    <h3 className="text-xl font-black text-dayglo-void">
+                      {formatBudget(budgetStats.total) ?? "$0"}
+                    </h3>
+                    <p className="text-xs font-semibold text-dayglo-void/70">
+                      {budgetStats.byCategory.length ? "By category" : "Add budgets to activities to track spend."}
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {budgetStats.byCategory.slice(0, 4).map((bucket) => (
+                        <div
+                          key={bucket.category}
+                          className="space-y-1 rounded-md border border-dayglo-void/40 bg-dayglo-yellow/20 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between text-sm font-semibold text-dayglo-void">
+                            <span>{bucket.category}</span>
+                            <span>{formatBudget(bucket.value) ?? "$0"}</span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full border border-dayglo-void/40 bg-white">
+                            <div
+                              className="h-full bg-dayglo-void"
+                              style={{
+                                width: `${
+                                  budgetStats.total ? Math.min(100, (bucket.value / budgetStats.total) * 100) : 0
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {!budgetStats.byCategory.length && (
+                        <p className="text-xs font-semibold text-dayglo-void/70">
+                          Add a budget to activities to see totals by category.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border-2 border-dayglo-void bg-white/80 p-4 shadow-hard-sm">
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-dayglo-pink">Travel load</p>
+                    <h3 className="text-xl font-black text-dayglo-void">
+                      {formatHoursLabel(Math.round(travelStats.totalSeconds / 60))} on the move
+                    </h3>
+                    <p className="text-xs font-semibold text-dayglo-void/70">
+                      {travelStats.totalMeters ? `${(travelStats.totalMeters / 1000).toFixed(1)} km` : "No travel logged"}
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {topTravelDays.length ? (
+                        topTravelDays.map((stat) => (
+                          <div
+                            key={stat.day.id}
+                            className="flex items-center justify-between rounded-md border border-dayglo-void/40 bg-dayglo-yellow/20 px-3 py-2 text-sm font-semibold text-dayglo-void"
+                          >
+                            <span>
+                              {stat.day.city} ({format(new Date(stat.day.date), "MMM d")})
+                            </span>
+                            <span className="data-mono rounded-sm border border-dayglo-void bg-white px-2 py-0.5 text-xs font-black shadow-[2px_2px_0px_0px_#050505]">
+                              {formatHoursLabel(Math.round(stat.durationSeconds / 60))}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs font-semibold text-dayglo-void/70">
+                          Tag trains, drives, or flights to see per-day travel.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border-2 border-dayglo-void bg-white/80 p-4 shadow-hard-sm">
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-dayglo-pink">Route</p>
+                    <h3 className="text-xl font-black text-dayglo-void">Cities & stops</h3>
+                    <p className="text-xs font-semibold text-dayglo-void/70">Chronological path</p>
+                    <div className="mt-3 space-y-2">
+                      {cityStops.ordered.length ? (
+                        cityStops.ordered.map((stop) => (
+                          <div
+                            key={stop.city}
+                            className="flex items-center justify-between rounded-md border border-dayglo-void/40 bg-dayglo-yellow/20 px-3 py-2 text-sm font-semibold text-dayglo-void"
+                          >
+                            <div>
+                              <p>{stop.city}</p>
+                              <p className="text-[11px] font-semibold text-dayglo-void/70">
+                                {stop.days.map((day) => format(new Date(day), "MMM d")).join(", ")}
+                              </p>
+                            </div>
+                            <span className="data-mono rounded-sm border border-dayglo-void bg-white px-2 py-0.5 text-xs font-black shadow-[2px_2px_0px_0px_#050505]">
+                              {(stop.activityCount || 0)} item{stop.activityCount === 1 ? "" : "s"}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs font-semibold text-dayglo-void/70">Add cities to see the route.</p>
+                      )}
+                    </div>
+                    {cityStops.routeLink && (
+                      <a
+                        href={cityStops.routeLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center justify-center rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
+                      >
+                        Open in Google Maps
+                      </a>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border-2 border-dayglo-void bg-white/80 p-4 shadow-hard-sm">
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-dayglo-pink">Attraction coverage</p>
+                    <h3 className="text-xl font-black text-dayglo-void">Are we doing the hits?</h3>
+                    <p className="text-xs font-semibold text-dayglo-void/70">
+                      Targeting 10 essentials per city
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {coverageStats.byCity.length ? (
+                        coverageStats.byCity.slice(0, 4).map((city) => {
+                          const coveragePercent = Math.min(100, (city.planned / 10) * 100);
+                          return (
+                            <div
+                              key={city.city}
+                              className="space-y-1 rounded-md border border-dayglo-void/40 bg-dayglo-yellow/20 px-3 py-2"
+                            >
+                              <div className="flex items-center justify-between text-sm font-semibold text-dayglo-void">
+                                <span>{city.city}</span>
+                                <span className="data-mono rounded-sm border border-dayglo-void bg-white px-2 py-0.5 text-[11px] font-black shadow-[2px_2px_0px_0px_#050505]">
+                                  {city.planned}/10 planned
+                                </span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full border border-dayglo-void/40 bg-white">
+                                <div className="h-full bg-dayglo-void" style={{ width: `${coveragePercent}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-xs font-semibold text-dayglo-void/70">
+                          Add activities to gauge coverage per city.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border-2 border-dayglo-void bg-white/80 p-4 shadow-hard-sm">
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-dayglo-pink">Schedule density</p>
+                    <h3 className="text-xl font-black text-dayglo-void">
+                      Avg {formatHoursLabel(scheduleStats.avgMinutes)} planned / day
+                    </h3>
+                    <p className="text-xs font-semibold text-dayglo-void/70">Based on activities with start + end times</p>
+                    <div className="mt-3 space-y-2">
+                      {scheduleStats.busiest && (
+                        <div className="flex items-center justify-between rounded-md border border-dayglo-void/40 bg-dayglo-yellow/20 px-3 py-2 text-sm font-semibold text-dayglo-void">
+                          <span>
+                            Busiest: {scheduleStats.busiest.city} ({format(new Date(scheduleStats.busiest.date), "MMM d")})
+                          </span>
+                          <span className="data-mono rounded-sm border border-dayglo-void bg-white px-2 py-0.5 text-xs font-black shadow-[2px_2px_0px_0px_#050505]">
+                            {formatHoursLabel(
+                              scheduleStats.dayStats.find((stat) => stat.day.id === scheduleStats.busiest?.id)?.minutes || 0,
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      {scheduleStats.lightest && (
+                        <div className="flex items-center justify-between rounded-md border border-dayglo-void/40 bg-dayglo-yellow/20 px-3 py-2 text-sm font-semibold text-dayglo-void">
+                          <span>
+                            Lightest: {scheduleStats.lightest.city} ({format(new Date(scheduleStats.lightest.date), "MMM d")})
+                          </span>
+                          <span className="data-mono rounded-sm border border-dayglo-void bg-white px-2 py-0.5 text-xs font-black shadow-[2px_2px_0px_0px_#050505]">
+                            {formatHoursLabel(
+                              scheduleStats.dayStats.find((stat) => stat.day.id === scheduleStats.lightest?.id)?.minutes || 0,
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      {!scheduleStats.dayStats.length && (
+                        <p className="text-xs font-semibold text-dayglo-void/70">
+                          Add start/end times to see pacing per day.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border-2 border-dayglo-void bg-white/80 p-4 shadow-hard-sm">
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-dayglo-pink">Lodging readiness</p>
+                    <h3 className="text-xl font-black text-dayglo-void">
+                      {lodgingStats.nightsPlanned}/{selectedTrip.days.length} nights covered
+                    </h3>
+                    <p className="text-xs font-semibold text-dayglo-void/70">Counts days with a hotel entry</p>
+                    <div className="mt-3 space-y-2">
+                      {lodgingStats.missing.length ? (
+                        lodgingStats.missing.slice(0, 4).map((day) => (
+                          <div
+                            key={day.id}
+                            className="flex items-center justify-between rounded-md border border-dayglo-void/40 bg-dayglo-yellow/20 px-3 py-2 text-sm font-semibold text-dayglo-void"
+                          >
+                            <span>
+                              {day.city} ({format(new Date(day.date), "MMM d")})
+                            </span>
+                            <span className="data-mono rounded-sm border border-dayglo-void bg-white px-2 py-0.5 text-xs font-black shadow-[2px_2px_0px_0px_#050505]">
+                              Missing
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs font-semibold text-dayglo-void/70">All days have lodging.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border-2 border-dashed border-dayglo-void bg-dayglo-yellow/40 p-8 text-center text-dayglo-void shadow-hard">
+                Select a trip to see dashboards.
               </div>
             )}
           </section>
