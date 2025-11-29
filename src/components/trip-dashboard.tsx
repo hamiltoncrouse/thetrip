@@ -346,6 +346,19 @@ const addMinutesToTime = (time: string, minutes: number) => {
 
 const normalizeTitle = (title?: string | null) => (title || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
+const parseAddressAndWhy = (description?: string | null) => {
+  const desc = description || "";
+  const addressMatch = desc.match(/address\s*[:\-]\s*([^|]+)(?:\||$)/i);
+  const whyMatch = desc.match(/why\s*[:\-]\s*([^|]+)$/i);
+  const address = addressMatch ? addressMatch[1].trim() : "";
+  const why = whyMatch ? whyMatch[1].trim() : "";
+  if (!why && addressMatch) {
+    const remainder = desc.replace(addressMatch[0], "").replace(/^\s*\|\s*/, "").trim();
+    return { address, why: remainder };
+  }
+  return { address, why };
+};
+
 const sortDaysByDate = (days: TripDay[]) =>
   [...days].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -1539,7 +1552,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           city: selectedDay.city || selectedTrip.homeCity || "your current locale",
           day: selectedDay.date,
           interests: [],
-          message: `Plan my day in ${selectedDay.city || "this city"} on ${selectedDay.date}. Return exactly three activities: a morning activity, an afternoon activity, and an evening dinner option. Each should be at least 90 minutes long. Keep titles punchy and include a short description. Avoid anything already planned in this trip: ${existingList || "none"}; pick different activities if there's overlap.`,
+          message: `Plan my day in ${selectedDay.city || "this city"} on ${selectedDay.date}. Return exactly three activities: a morning activity, an afternoon activity, and an evening dinner option. Each should be at least 90 minutes long. Keep titles punchy and include a short description. Avoid anything already planned in this trip: ${existingList || "none"}; pick different activities if there's overlap. For each suggestion include a street-level address and a short reason to go. Format the description exactly as: "Address: <address> | Why: <why it's worth it>".`,
           tripContext: buildTripContext(selectedTrip, selectedDay),
         }),
       });
@@ -1569,6 +1582,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         const idea = uniqueIdeas[index];
         const slot = slots[index];
         const title = idea.title ? `${slot.label}: ${idea.title}` : `${slot.label} activity`;
+        const { address, why } = parseAddressAndWhy(idea.description);
         const startTime = slot.start;
         const endTime = addMinutesToTime(startTime, 90);
         const resActivity = await fetch(
@@ -1578,9 +1592,10 @@ const sortActivitiesByStart = (activities: Activity[]) =>
             headers: jsonHeaders,
             body: JSON.stringify({
               title,
-              description: idea.description || undefined,
+              description: why || idea.description || undefined,
               startTime,
               endTime,
+              location: address || undefined,
             }),
           },
         );
@@ -1712,7 +1727,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         <button
           type="submit"
           disabled={!isAuthenticated || chatLoading || !chatInput.trim()}
-          className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-lime py-2 text-sm font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-lime py-2 text-xs font-black uppercase tracking-[0.12em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
         >
           Send to Fonda
         </button>
