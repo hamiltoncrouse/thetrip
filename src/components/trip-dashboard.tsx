@@ -1592,7 +1592,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
             headers: jsonHeaders,
             body: JSON.stringify({
               title,
-              description: why || idea.description || undefined,
+              description: why ? `Why: ${why}` : idea.description || undefined,
               startTime,
               endTime,
               location: address || undefined,
@@ -1637,7 +1637,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
 
   const chatPanelContent = (
     <div className="flex h-full w-full flex-col">
-      <div className="flex items-center justify-between gap-2 pb-4">
+      <div className="flex flex-col gap-2 pb-3">
         <div className="flex items-center gap-4">
           <div className="flex-shrink-0 rounded-full border-4 border-dayglo-void bg-white shadow-hard">
             <Image
@@ -1651,7 +1651,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           </div>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Fonda</p>
-            <h2 className="text-xl font-black text-dayglo-void">Travel consultant</h2>
+            <h2 className="text-xl font-black text-dayglo-void leading-tight">Travel consultant</h2>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1659,14 +1659,14 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           <button
             type="button"
             onClick={() => setChatExpanded((prev) => !prev)}
-            className="hidden rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none lg:inline-flex"
+            className="inline-flex rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none"
           >
             {chatExpanded ? "Compact" : "Expand"}
           </button>
           <button
             type="button"
             onClick={() => setIsChatOpen(false)}
-            className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none lg:hidden"
+            className="rounded-md border-2 border-dayglo-void bg-dayglo-orange px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none lg:hidden"
           >
             Close
           </button>
@@ -3303,7 +3303,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           <div className="hidden lg:block">
             {isChatOpen ? (
               <aside
-                className={`sticky top-8 flex h-[calc(100vh-8rem)] w-full flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
+                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
                   chatExpanded ? "" : ""
                 }`}
               >
