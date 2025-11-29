@@ -1593,7 +1593,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
             headers: jsonHeaders,
             body: JSON.stringify({
               title,
-              description: notesText ? `Why: ${notesText}` : undefined,
+              description: notesText || undefined,
               notes: notesText || undefined,
               startTime,
               endTime,
@@ -3305,7 +3305,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           <div className="hidden lg:block">
             {isChatOpen ? (
               <aside
-                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
+                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full max-w-[380px] flex-col overflow-hidden rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
                   chatExpanded ? "" : ""
                 }`}
               >
