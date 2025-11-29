@@ -1585,6 +1585,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         const { address, why } = parseAddressAndWhy(idea.description);
         const startTime = slot.start;
         const endTime = addMinutesToTime(startTime, 90);
+        const notesText = why || idea.description || "Worth a stop — explore and linger.";
         const resActivity = await fetch(
           `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`,
           {
@@ -1592,7 +1593,8 @@ const sortActivitiesByStart = (activities: Activity[]) =>
             headers: jsonHeaders,
             body: JSON.stringify({
               title,
-              description: why ? `Why: ${why}` : idea.description || undefined,
+              description: notesText ? `Why: ${notesText}` : undefined,
+              notes: notesText || undefined,
               startTime,
               endTime,
               location: address || undefined,
