@@ -344,6 +344,8 @@ const addMinutesToTime = (time: string, minutes: number) => {
   return `${String(nextHours).padStart(2, "0")}:${String(nextMinutes).padStart(2, "0")}`;
 };
 
+const normalizeTitle = (title?: string | null) => (title || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 const sortDaysByDate = (days: TripDay[]) =>
   [...days].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -1521,6 +1523,15 @@ const sortActivitiesByStart = (activities: Activity[]) =>
     setPlanDayStatus(null);
     setTripError(null);
     try {
+      const existingTitles = new Set(
+        (selectedTrip.days || [])
+          .flatMap((day) => day.activities || [])
+          .map((activity) => normalizeTitle(activity.title)),
+      );
+      const existingList = Array.from(existingTitles)
+        .filter(Boolean)
+        .slice(0, 20)
+        .join(", ");
       const res = await fetch("/api/ai/suggestions", {
         method: "POST",
         headers: jsonHeaders,
@@ -1528,14 +1539,22 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           city: selectedDay.city || selectedTrip.homeCity || "your current locale",
           day: selectedDay.date,
           interests: [],
-          message: `Plan my day in ${selectedDay.city || "this city"} on ${selectedDay.date}. Return exactly three activities: a morning activity, an afternoon activity, and an evening dinner option. Each should be at least 90 minutes long. Keep titles punchy and include a short description.`,
+          message: `Plan my day in ${selectedDay.city || "this city"} on ${selectedDay.date}. Return exactly three activities: a morning activity, an afternoon activity, and an evening dinner option. Each should be at least 90 minutes long. Keep titles punchy and include a short description. Avoid anything already planned in this trip: ${existingList || "none"}; pick different activities if there's overlap.`,
           tripContext: buildTripContext(selectedTrip, selectedDay),
         }),
       });
       const data = await res.json().catch(() => ({}));
       const items: Array<{ title?: string; description?: string }> = data.items || [];
-      const topThree = items.slice(0, 3);
-      if (!topThree.length) {
+      const uniqueIdeas: Array<{ title?: string; description?: string }> = [];
+      const seenTitles = new Set(existingTitles);
+      for (const idea of items) {
+        const norm = normalizeTitle(idea.title);
+        if (!norm || seenTitles.has(norm)) continue;
+        seenTitles.add(norm);
+        uniqueIdeas.push(idea);
+        if (uniqueIdeas.length >= 3) break;
+      }
+      if (!uniqueIdeas.length) {
         throw new Error("No ideas came back. Try again in a moment.");
       }
 
@@ -1546,8 +1565,8 @@ const sortActivitiesByStart = (activities: Activity[]) =>
       ];
 
       const created: Activity[] = [];
-      for (let index = 0; index < Math.min(3, topThree.length); index += 1) {
-        const idea = topThree[index];
+      for (let index = 0; index < Math.min(3, uniqueIdeas.length); index += 1) {
+        const idea = uniqueIdeas[index];
         const slot = slots[index];
         const title = idea.title ? `${slot.label}: ${idea.title}` : `${slot.label} activity`;
         const startTime = slot.start;
