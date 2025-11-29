@@ -75,12 +75,28 @@ type Trip = {
   homeCity?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  profileId?: string | null;
+  profile?: TravelProfile | null;
   days: TripDay[];
   collaborators?: Array<{ id: string; email: string }>;
 };
 
+type TravelProfile = {
+  id?: string;
+  name: string;
+  travelerType?: string;
+  kids?: string[];
+  preferences?: Record<string, number>;
+  budget?: string;
+  pace?: string;
+  mobility?: string;
+  goals?: string;
+  updatedAt?: string;
+};
+
 type TripsResponse = {
   trips: Trip[];
+  user?: { savedProfiles?: TravelProfile[] };
 };
 
 type ChatMessage = {
@@ -126,6 +142,17 @@ const emptyTripDetailsForm = {
   description: "",
 };
 
+const defaultProfile: TravelProfile = {
+  name: "Custom profile",
+  travelerType: "couple",
+  kids: [],
+  preferences: { culture: 60, food: 60, active: 40, nightlife: 20, shopping: 20, relax: 30 },
+  budget: "mid",
+  pace: "balanced",
+  mobility: "",
+  goals: "",
+};
+
 const initialChat: ChatMessage[] = [
   {
     id: "intro",
@@ -150,6 +177,22 @@ const buildTripContext = (trip: Trip | null, day: TripDay | null) => {
   if (!trip) return "";
   const parts: string[] = [];
   parts.push(`Trip "${trip.title}"${trip.homeCity ? ` (home: ${trip.homeCity})` : ""}`);
+  if (trip.profile) {
+    const p = trip.profile;
+    const prefLine = p.preferences
+      ? Object.entries(p.preferences)
+          .filter(([, val]) => typeof val === "number" && val > 0)
+          .map(([k, v]) => `${k} ${v}%`)
+          .join(", ")
+      : "";
+    parts.push(
+      `Traveler profile: ${p.name || "unnamed"}; type ${p.travelerType || "unspecified"}${
+        p.budget ? `; budget ${p.budget}` : ""
+      }${p.pace ? `; pace ${p.pace}` : ""}${prefLine ? `; prefs ${prefLine}` : ""}${
+        p.goals ? `; goals ${p.goals}` : ""
+      }.`,
+    );
+  }
   if (day) {
     parts.push(`Current day: ${day.city}${day.date ? ` on ${day.date}` : ""}`);
     const planned = (day.activities || [])
@@ -175,6 +218,28 @@ const buildTripContext = (trip: Trip | null, day: TripDay | null) => {
     parts.push(`Other stops: ${otherStops.join(", ")}`);
   }
   return parts.join(". ");
+};
+
+const summarizeProfile = (profile?: TravelProfile | null) => {
+  if (!profile) return "";
+  const prefLine = profile.preferences
+    ? Object.entries(profile.preferences)
+        .filter(([, val]) => typeof val === "number" && val > 0)
+        .map(([k, v]) => `${k} ${v}%`)
+        .join(", ")
+    : "";
+  return [
+    profile.name || "Trip profile",
+    profile.travelerType ? `Type: ${profile.travelerType}` : "",
+    profile.kids?.length ? `Kids: ${profile.kids.join(", ")}` : "",
+    prefLine ? `Prefs: ${prefLine}` : "",
+    profile.budget ? `Budget: ${profile.budget}` : "",
+    profile.pace ? `Pace: ${profile.pace}` : "",
+    profile.mobility ? `Mobility: ${profile.mobility}` : "",
+    profile.goals ? `Goals: ${profile.goals}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
 };
 
 const getHotelMetadata = (activity: Activity): HotelActivityMetadata | null => {
@@ -240,6 +305,11 @@ export function TripDashboard({
   const [shareEmail, setShareEmail] = useState("");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [tripDetailsForm, setTripDetailsForm] = useState(emptyTripDetailsForm);
+  const [savedProfiles, setSavedProfiles] = useState<TravelProfile[]>([]);
+  const [profileForm, setProfileForm] = useState<{ mode: "saved" | "custom"; selectedId: string | null; profile: TravelProfile }>(
+    { mode: "custom", selectedId: null, profile: defaultProfile },
+  );
+  const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [showTripDetailsForm, setShowTripDetailsForm] = useState(false);
   const [savingTripDetails, setSavingTripDetails] = useState(false);
   const [tripDetailsStatus, setTripDetailsStatus] = useState<string | null>(null);
@@ -415,6 +485,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           })),
         }));
         setTrips(normalized);
+        setSavedProfiles((data.user?.savedProfiles as TravelProfile[]) || []);
         const placeEntries: DayPlaceLookup = {};
         data.trips?.forEach((trip) => {
           trip.days.forEach((day) => {
@@ -463,6 +534,23 @@ const sortActivitiesByStart = (activities: Activity[]) =>
   const calendarHotels = calendarDay?.activities?.filter((activity) => activity.type === "hotel") || [];
   const calendarEventHotel = calendarEvent ? getHotelMetadata(calendarEvent) : null;
   const calendarEventBudgetValue = calendarEvent ? formatBudget(getActivityBudgetValue(calendarEvent)) : null;
+
+  useEffect(() => {
+    if (!selectedTrip) return;
+    const profileFromTrip = selectedTrip.profile || null;
+    const savedMatch = profileFromTrip?.id
+      ? savedProfiles.find((p) => p.id === profileFromTrip.id) || null
+      : selectedTrip.profileId
+      ? savedProfiles.find((p) => p.id === selectedTrip.profileId) || null
+      : null;
+    if (savedMatch) {
+      setProfileForm({ mode: "saved", selectedId: savedMatch.id || null, profile: savedMatch });
+    } else if (profileFromTrip) {
+      setProfileForm({ mode: "custom", selectedId: null, profile: { ...profileFromTrip } });
+    } else {
+      setProfileForm({ mode: "custom", selectedId: null, profile: defaultProfile });
+    }
+  }, [selectedTrip, savedProfiles]);
 
   const dayByDateKey = useMemo(() => {
     const map: Record<string, TripDay> = {};
@@ -1368,6 +1456,50 @@ const sortActivitiesByStart = (activities: Activity[]) =>
     }
   }
 
+  async function saveTripProfile(saveAsTemplate = false) {
+    if (!selectedTrip) return;
+    const profile = { ...profileForm.profile, name: profileForm.profile.name || "Trip profile" };
+    setTripError(null);
+    setProfileStatus(null);
+    try {
+      if (saveAsTemplate) {
+        const res = await fetch("/api/profiles", {
+          method: "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify(profile),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error || "Failed to save reusable profile");
+        }
+        const data = await res.json();
+        setSavedProfiles(data.profiles || []);
+        const savedProfile = (data.profiles || []).find((p: TravelProfile) => p.name === profile.name) || profile;
+        profile.id = savedProfile.id || profile.id;
+      }
+
+      const resTrip = await fetch(`/api/trips/${selectedTrip.id}`, {
+        method: "PATCH",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          profile,
+          profileId: profile.id ?? profileForm.selectedId ?? null,
+        }),
+      });
+      if (!resTrip.ok) {
+        const body = await resTrip.json().catch(() => ({}));
+        throw new Error(body?.error || "Failed to save trip profile");
+      }
+      const dataTrip = await resTrip.json();
+      const updatedTrip = dataTrip.trip as Trip;
+      setTrips((prev) => prev.map((trip) => (trip.id === updatedTrip.id ? { ...trip, ...updatedTrip } : trip)));
+      setProfileForm((prev) => ({ ...prev, selectedId: profile.id || prev.selectedId, profile }));
+      setProfileStatus("Profile saved.");
+    } catch (error) {
+      setTripError(error instanceof Error ? error.message : "Failed to save profile");
+    }
+  }
+
   async function addTripDay(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedTrip) return;
@@ -1916,6 +2048,11 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                     : "Sign in with Google to load your trips."}
                 </p>
               )}
+              {selectedTrip?.profile && (
+                <p className="text-xs font-black text-dayglo-void">
+                  Profile: {summarizeProfile(selectedTrip.profile)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -2066,6 +2203,224 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                   rows={3}
                   className="mt-1 w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                 />
+              </div>
+              <div className="sm:col-span-2 rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/20 p-4 shadow-hard-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">Trip profile</p>
+                    <p className="text-sm font-semibold text-dayglo-void">
+                      {profileForm.mode === "saved" && profileForm.selectedId
+                        ? "Using saved profile"
+                        : "Custom for this trip"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setProfileForm({ mode: "custom", selectedId: null, profile: defaultProfile })}
+                    className="rounded-md border-2 border-dayglo-void bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard-sm transition hover:bg-dayglo-yellow"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Saved profile</label>
+                    <select
+                      value={profileForm.selectedId || ""}
+                      onChange={(e) => {
+                        const id = e.target.value || null;
+                        const found = savedProfiles.find((p) => (p.id || p.name) === id);
+                        if (found) {
+                          setProfileForm({ mode: "saved", selectedId: id, profile: found });
+                        } else {
+                          setProfileForm((prev) => ({ ...prev, mode: "custom", selectedId: null }));
+                        }
+                      }}
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                    >
+                      <option value="">— Select —</option>
+                      {savedProfiles.map((profile) => (
+                        <option key={profile.id || profile.name} value={profile.id || profile.name}>
+                          {profile.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Profile name</label>
+                    <input
+                      value={profileForm.profile.name}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          profile: { ...prev.profile, name: e.target.value },
+                        }))
+                      }
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                      placeholder="e.g., Couple culture trip"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Traveler type</label>
+                    <select
+                      value={profileForm.profile.travelerType || ""}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          profile: { ...prev.profile, travelerType: e.target.value },
+                        }))
+                      }
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                    >
+                      <option value="">Unspecified</option>
+                      <option value="solo">Solo</option>
+                      <option value="couple">Couple</option>
+                      <option value="friends">Friends</option>
+                      <option value="family">Family</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Kids (ages)</label>
+                    <input
+                      value={(profileForm.profile.kids || []).join(", ")}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          profile: {
+                            ...prev.profile,
+                            kids: e.target.value
+                              .split(",")
+                              .map((x) => x.trim())
+                              .filter(Boolean),
+                          },
+                        }))
+                      }
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                      placeholder="e.g., 5, 9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Budget</label>
+                    <select
+                      value={profileForm.profile.budget || ""}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          profile: { ...prev.profile, budget: e.target.value },
+                        }))
+                      }
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                    >
+                      <option value="">Unspecified</option>
+                      <option value="value">Value</option>
+                      <option value="mid">Mid</option>
+                      <option value="luxe">Luxury</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Pace</label>
+                    <select
+                      value={profileForm.profile.pace || ""}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          profile: { ...prev.profile, pace: e.target.value },
+                        }))
+                      }
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                    >
+                      <option value="">Unspecified</option>
+                      <option value="chill">Chill</option>
+                      <option value="balanced">Balanced</option>
+                      <option value="packed">Packed</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Preferences (0–100)</label>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {[
+                        ["culture", "Culture/History"],
+                        ["food", "Food/Drink"],
+                        ["active", "Outdoors/Active"],
+                        ["nightlife", "Nightlife/Music"],
+                        ["shopping", "Shopping/Design"],
+                        ["relax", "Relax/Wellness"],
+                      ].map(([key, label]) => (
+                        <label
+                          key={key}
+                          className="flex items-center justify-between gap-2 rounded-md border border-dayglo-void/30 bg-white px-2 py-1 text-xs font-semibold text-dayglo-void"
+                        >
+                          <span>{label}</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={profileForm.profile.preferences?.[key] ?? 0}
+                            onChange={(e) =>
+                              setProfileForm((prev) => ({
+                                ...prev,
+                                profile: {
+                                  ...prev.profile,
+                                  preferences: {
+                                    ...(prev.profile.preferences || {}),
+                                    [key]: Number(e.target.value),
+                                  },
+                                },
+                              }))
+                            }
+                            className="w-16 rounded border border-dayglo-void/40 px-1 py-0.5 text-right text-xs"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Mobility / constraints</label>
+                    <input
+                      value={profileForm.profile.mobility || ""}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          profile: { ...prev.profile, mobility: e.target.value },
+                        }))
+                      }
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                      placeholder="e.g., Prefer short walks, avoid late nights"
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Goals / vibe</label>
+                    <textarea
+                      value={profileForm.profile.goals || ""}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          profile: { ...prev.profile, goals: e.target.value },
+                        }))
+                      }
+                      rows={2}
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                      placeholder="e.g., Architecture + local food, keep afternoons free"
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => saveTripProfile(false)}
+                    className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
+                  >
+                    Save to trip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => saveTripProfile(true)}
+                    className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
+                  >
+                    Save & reuse
+                  </button>
+                  {profileStatus && <span className="text-xs font-black text-dayglo-void">{profileStatus}</span>}
+                </div>
               </div>
               <div className="flex items-center gap-3 sm:col-span-2">
                 <button

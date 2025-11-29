@@ -19,6 +19,7 @@ model User {
   displayName String?
   homeCity    String?
   credits     Int      @default(50)
+  savedProfiles Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -33,6 +34,8 @@ model Trip {
   homeCity    String?
   startDate   DateTime?
   endDate     DateTime?
+  profile     Json?
+  profileId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

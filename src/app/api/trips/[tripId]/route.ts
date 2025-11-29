@@ -10,6 +10,8 @@ const updateTripSchema = z.object({
   homeCity: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  profileId: z.string().optional(),
+  profile: z.record(z.any()).optional(),
 });
 
 function parseDateInput(value?: string) {
@@ -76,6 +78,8 @@ export async function PATCH(
       updateData.startDate = parseDateInput(parsed.data.startDate) ?? null;
     if (parsed.data.endDate !== undefined)
       updateData.endDate = parseDateInput(parsed.data.endDate) ?? null;
+    if (parsed.data.profile !== undefined) updateData.profile = parsed.data.profile ?? null;
+    if (parsed.data.profileId !== undefined) updateData.profileId = parsed.data.profileId ?? null;
 
     const updated = await prisma.trip.update({ where: { id: tripId }, data: updateData });
     return NextResponse.json({ trip: updated });

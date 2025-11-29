@@ -9,6 +9,8 @@ const createTripSchema = z.object({
   endDate: z.string().optional(),
   homeCity: z.string().optional(),
   description: z.string().optional(),
+  profileId: z.string().optional(),
+  profile: z.record(z.any()).optional(),
 });
 
 const DEFAULT_CITY = "Paris";
@@ -90,6 +92,7 @@ export async function GET(request: Request) {
         credits: account.credits,
         displayName: account.displayName,
         email: account.email,
+        savedProfiles: account.savedProfiles ?? [],
       },
     });
   } catch (error) {
@@ -114,7 +117,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { title, description, startDate, endDate, homeCity } = parsed.data;
+    const { title, description, startDate, endDate, homeCity, profile, profileId } = parsed.data;
 
     const dayEntries = buildDayEntries(startDate, endDate, homeCity);
 
@@ -126,6 +129,8 @@ export async function POST(req: Request) {
         startDate: startDate ? normalizeDate(startDate) : null,
         endDate: endDate ? normalizeDate(endDate) : null,
         userId: account.id,
+        profile: profile ?? null,
+        profileId: profileId ?? null,
         days: {
           create: dayEntries,
         },
