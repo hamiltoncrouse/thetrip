@@ -2153,37 +2153,54 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                                     : "border-dayglo-void bg-paper hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
                                   : "border-dayglo-void bg-dayglo-yellow/30 text-dayglo-void"
                               } ${tripDay ? "cursor-pointer" : "cursor-default"}`}
+                              title={
+                                tripDay
+                                  ? (tripDay.activities || [])
+                                      .map((activity) => {
+                                        const time = formatTime(activity.startTime);
+                                        const loc = activity.location ? ` @ ${activity.location}` : "";
+                                        return `${time !== "--:--" ? `${time} ` : ""}${activity.title}${loc}`;
+                                      })
+                                      .join(" • ") || "No activities yet."
+                                  : undefined
+                              }
+                              aria-label={
+                                tripDay
+                                  ? `${tripDay.city || "Unknown city"} ${format(dateValue, "MMM d")}. ${
+                                      tripDay.activities?.length
+                                        ? `${tripDay.activities.length} activities planned.`
+                                        : "No activities yet."
+                                    }`
+                                  : undefined
+                              }
                             >
                               <div className="flex items-center justify-between text-slate-500">
                                 <span className="text-sm font-black text-dayglo-void">
                                   {dateValue.getDate()}
                                 </span>
-                                {tripDay && <span className="text-[10px] font-black uppercase text-dayglo-pink">{tripDay.city}</span>}
+                                {tripDay && (
+                                  <span className="max-w-[80px] truncate text-[10px] font-black uppercase text-dayglo-pink">
+                                    {tripDay.city}
+                                  </span>
+                                )}
                               </div>
                               {tripDay ? (
-                                <ul className="mt-2 hidden space-y-1 text-[11px] text-dayglo-void sm:block">
-                                  {(tripDay.activities || []).slice(0, 2).map((activity) => (
-                                    <li
-                                      key={activity.id}
-                                      className="flex gap-1"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        setCalendarDayId(tripDay.id);
-                                        setCalendarEventId(activity.id);
-                                      }}
-                                    >
-                                      <span className="text-dayglo-void/60">
-                                        {formatTime(activity.startTime)}
-                                      </span>
-                                      <span className="text-dayglo-void font-semibold">{activity.title}</span>
-                                    </li>
-                                  ))}
-                                  {(tripDay.activities?.length || 0) > 2 && (
-                                    <li className="text-dayglo-void/70 font-semibold">
-                                      + {(tripDay.activities?.length || 0) - 2} more
-                                    </li>
-                                  )}
-                                </ul>
+                                <div className="mt-2 space-y-1 text-[11px] text-dayglo-void">
+                                  <p className="truncate font-black">
+                                    {tripDay.activities?.find((activity) => activity.type === "hotel")?.title ||
+                                      "No lodging set"}
+                                  </p>
+                                  <p className="truncate text-[10px] font-semibold text-dayglo-void/70">
+                                    {tripDay.city}
+                                  </p>
+                                  <p className="truncate text-[10px] text-dayglo-void/60">
+                                    {tripDay.activities && tripDay.activities.length
+                                      ? `${tripDay.activities.length} item${
+                                          tripDay.activities.length === 1 ? "" : "s"
+                                        } planned`
+                                      : "No activities"}
+                                  </p>
+                                </div>
                               ) : (
                                 <p className="mt-6 hidden text-center text-dayglo-void/60 sm:block">—</p>
                               )}
