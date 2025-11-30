@@ -23,7 +23,8 @@ export default function StartTripPage() {
     budget: "",
     pace: "",
     goals: "",
-    preferences: { culture: 60, food: 60, active: 40 },
+    mobility: "",
+    preferences: { culture: 60, food: 60, active: 40, nightlife: 20, shopping: 20, relax: 30 },
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export default function StartTripPage() {
                 budget: profileForm.budget || undefined,
                 pace: profileForm.pace || undefined,
                 goals: profileForm.goals || undefined,
+                mobility: profileForm.mobility || undefined,
                 preferences: profileForm.preferences,
               }
             : undefined,
@@ -175,7 +177,7 @@ export default function StartTripPage() {
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">Travel profile (optional)</p>
                   <p className="text-sm font-semibold text-dayglo-void">
-                    Helps Fonda tailor suggestions for this trip.
+                    Helps Fonda tailor suggestions for this trip (you can edit later).
                   </p>
                 </div>
                 <label className="flex items-center gap-2 text-xs font-semibold text-dayglo-void">
@@ -258,6 +260,9 @@ export default function StartTripPage() {
                         ["culture", "Culture/History"],
                         ["food", "Food/Drink"],
                         ["active", "Outdoors/Active"],
+                        ["nightlife", "Nightlife/Music"],
+                        ["shopping", "Shopping/Design"],
+                        ["relax", "Relax/Wellness"],
                       ].map(([key, label]) => (
                         <label key={key} className="flex items-center justify-between gap-2 rounded-md border border-dayglo-void/30 bg-white px-3 py-1 text-xs font-semibold text-dayglo-void">
                           <span>{label}</span>
@@ -280,6 +285,18 @@ export default function StartTripPage() {
                         </label>
                       ))}
                     </div>
+                  </div>
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs font-black uppercase" htmlFor="mobility">
+                      Constraints / dietary / mobility
+                    </label>
+                    <input
+                      id="mobility"
+                      value={profileForm.mobility}
+                      onChange={(e) => setProfileForm((prev) => ({ ...prev, mobility: e.target.value }))}
+                      className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                      placeholder="e.g., Limited walking, gluten free, avoid late nights"
+                    />
                   </div>
                   <div className="sm:col-span-2 space-y-1">
                     <label className="text-xs font-black uppercase" htmlFor="goals">
