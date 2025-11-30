@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { authenticateRequest, AuthError } from "@/lib/auth";
 
 const profileSchema = z.object({
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     await prisma.user.update({
       where: { id: account.id },
-      data: { savedProfiles: nextProfiles },
+      data: { savedProfiles: nextProfiles as Prisma.InputJsonValue },
     });
 
     return NextResponse.json({ profiles: nextProfiles });
