@@ -9,7 +9,7 @@ const profileSchema = z.object({
   name: z.string().min(1),
   travelerType: z.string().optional(),
   kids: z.array(z.string()).optional(),
-  preferences: z.record(z.number()).optional(),
+  preferences: z.record(z.string(), z.number()).optional(),
   budget: z.string().optional(),
   pace: z.string().optional(),
   mobility: z.string().optional(),
