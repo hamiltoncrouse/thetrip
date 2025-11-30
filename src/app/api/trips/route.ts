@@ -62,10 +62,21 @@ async function ensureActivityBudgetColumn() {
   }
 }
 
+async function ensureProfileColumns() {
+  try {
+    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "savedProfiles" JSONB;');
+    await prisma.$executeRawUnsafe('ALTER TABLE "Trip" ADD COLUMN IF NOT EXISTS "profile" JSONB;');
+    await prisma.$executeRawUnsafe('ALTER TABLE "Trip" ADD COLUMN IF NOT EXISTS "profileId" TEXT;');
+  } catch (error) {
+    console.error("Failed to ensure profile columns", error);
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { account } = await authenticateRequest(request);
     await ensureActivityBudgetColumn();
+    await ensureProfileColumns();
     const trips = await prisma.trip.findMany({
       where: {
         OR: [{ userId: account.id }, { collaborators: { some: { email: account.email } } }],
@@ -107,6 +118,7 @@ export async function POST(req: Request) {
   try {
     const { account } = await authenticateRequest(req);
     await ensureActivityBudgetColumn();
+    await ensureProfileColumns();
     const json = await req.json();
     const parsed = createTripSchema.safeParse(json);
 
