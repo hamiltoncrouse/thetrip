@@ -29,6 +29,16 @@ function coerceHomeCity(token: DecodedIdToken) {
   return typeof cityClaim === "string" && cityClaim.length ? cityClaim : null;
 }
 
+async function ensureProfileColumns() {
+  try {
+    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "savedProfiles" JSONB;');
+    await prisma.$executeRawUnsafe('ALTER TABLE "Trip" ADD COLUMN IF NOT EXISTS "profile" JSONB;');
+    await prisma.$executeRawUnsafe('ALTER TABLE "Trip" ADD COLUMN IF NOT EXISTS "profileId" TEXT;');
+  } catch (error) {
+    console.error("Failed to ensure profile columns", error);
+  }
+}
+
 export async function authenticateRequest(request: Request): Promise<AuthContext> {
   if (!isFirebaseConfigured) {
     throw new AuthError(500, "Authentication is not configured on the server.");
@@ -48,6 +58,7 @@ export async function authenticateRequest(request: Request): Promise<AuthContext
     throw new AuthError(401, "Invalid or expired authentication token.");
   }
 
+  await ensureProfileColumns();
   const email = coerceEmail(decoded.uid, decoded.email);
   const homeCity = coerceHomeCity(decoded);
   let account = await prisma.user.findUnique({ where: { id: decoded.uid } });
