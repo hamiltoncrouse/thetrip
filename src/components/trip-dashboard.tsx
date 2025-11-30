@@ -418,15 +418,16 @@ const normalizeTitle = (title?: string | null) => (title || "").toLowerCase().re
 
 const parseAddressAndWhy = (description?: string | null) => {
   const desc = description || "";
+  const linkMatch = desc.match(/https?:\/\/\S+/i);
   const addressMatch = desc.match(/address\s*[:\-]\s*([^|]+)(?:\||$)/i);
   const whyMatch = desc.match(/why\s*[:\-]\s*([^|]+)$/i);
   const address = addressMatch ? addressMatch[1].trim() : "";
   const why = whyMatch ? whyMatch[1].trim() : "";
   if (!why && addressMatch) {
     const remainder = desc.replace(addressMatch[0], "").replace(/^\s*\|\s*/, "").trim();
-    return { address, why: remainder };
+    return { address, why: remainder, link: linkMatch ? linkMatch[0] : "" };
   }
-  return { address, why };
+  return { address, why, link: linkMatch ? linkMatch[0] : "" };
 };
 
 const sortDaysByDate = (days: TripDay[]) =>
@@ -1714,10 +1715,11 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         const idea = uniqueIdeas[index];
         const slot = slots[index];
         const title = idea.title ? `${slot.label}: ${idea.title}` : `${slot.label} activity`;
-        const { address, why } = parseAddressAndWhy(idea.description);
+        const { address, why, link } = parseAddressAndWhy(idea.description);
         const startTime = slot.start;
         const endTime = addMinutesToTime(startTime, 90);
-        const notesText = why || idea.description || "Worth a stop — explore and linger.";
+        const baseNotes = why || idea.description || "Worth a stop — explore and linger.";
+        const notesText = link ? `${baseNotes} | Link: ${link}` : baseNotes;
         const resActivity = await fetch(
           `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`,
           {
