@@ -129,8 +129,8 @@ export async function POST(req: Request) {
         startDate: startDate ? normalizeDate(startDate) : null,
         endDate: endDate ? normalizeDate(endDate) : null,
         userId: account.id,
-        profile: profile ?? null,
-        profileId: profileId ?? null,
+        profile: profile ?? undefined,
+        profileId: profileId ?? undefined,
         days: {
           create: dayEntries,
         },
