@@ -10,7 +10,7 @@ const createTripSchema = z.object({
   homeCity: z.string().optional(),
   description: z.string().optional(),
   profileId: z.string().optional(),
-  profile: z.record(z.any()).optional(),
+  profile: z.record(z.string(), z.any()).optional(),
 });
 
 const DEFAULT_CITY = "Paris";
