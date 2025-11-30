@@ -1684,7 +1684,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           city: selectedDay.city || selectedTrip.homeCity || "your current locale",
           day: selectedDay.date,
           interests: [],
-          message: `Plan my day in ${selectedDay.city || "this city"} on ${selectedDay.date}. Return exactly three activities: a morning activity, an afternoon activity, and an evening dinner option. Each should be at least 90 minutes long. Keep titles punchy and include a short description. Avoid anything already planned in this trip: ${existingList || "none"}; pick different activities if there's overlap. For each suggestion include a street-level address and a short reason to go. Format the description exactly as: "Address: <address> | Why: <why it's worth it>".`,
+          message: `Plan my day in ${selectedDay.city || "this city"} on ${selectedDay.date}. Return exactly three activities: a morning activity, an afternoon activity, and an evening dinner option. Each should be at least 90 minutes long. Keep titles punchy and include a short description. Avoid anything already planned in this trip: ${existingList || "none"}; pick different activities if there's overlap. Prefer a mix that can include guided or self-guided walking tours, museums/architecture, seasonal or date-specific events (festivals, exhibitions, shows), and great dining that fits the traveler profile. If weather/season makes an idea unreasonable (e.g., winter outdoor swimming), avoid it. For each suggestion include a street-level address and a short reason to go. Format the description exactly as: "Address: <address> | Why: <why it's worth it>".`,
           tripContext: buildTripContext(selectedTrip, selectedDay),
         }),
       });
