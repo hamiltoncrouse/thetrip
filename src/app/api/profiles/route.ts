@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     await prisma.user.update({
       where: { id: account.id },
-      data: { savedProfiles: nextProfiles as Prisma.InputJsonValue },
+      data: { savedProfiles: nextProfiles as unknown as Prisma.InputJsonValue },
     });
 
     return NextResponse.json({ profiles: nextProfiles });
