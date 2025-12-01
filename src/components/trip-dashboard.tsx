@@ -317,6 +317,7 @@ export function TripDashboard({
     { mode: "custom", selectedId: null, profile: defaultProfile },
   );
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
+  const [profileKeywordsInput, setProfileKeywordsInput] = useState("");
   const [showTripDetailsForm, setShowTripDetailsForm] = useState(false);
   const [savingTripDetails, setSavingTripDetails] = useState(false);
   const [tripDetailsStatus, setTripDetailsStatus] = useState<string | null>(null);
@@ -593,6 +594,8 @@ const sortActivitiesByStart = (activities: Activity[]) =>
     } else {
       setProfileForm({ mode: "custom", selectedId: null, profile: defaultProfile });
     }
+    const keywords = profileFromTrip?.keywords || savedMatch?.keywords || [];
+    setProfileKeywordsInput(keywords.join(", "));
   }, [selectedTrip, savedProfiles]);
 
   const dayByDateKey = useMemo(() => {
@@ -2464,19 +2467,20 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                 <div className="space-y-1 sm:col-span-2">
                   <label className="text-xs font-black uppercase text-dayglo-void">Keywords (max 10)</label>
                   <input
-                      value={(profileForm.profile.keywords || []).join(", ")}
-                      onChange={(e) =>
-                        setProfileForm((prev) => ({
-                          ...prev,
-                          profile: {
-                            ...prev.profile,
-                            keywords: normalizeKeywords(e.target.value),
-                          },
-                        }))
-                      }
-                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                      placeholder="e.g., Jazz, football, antiques, cycling, galleries"
-                    />
+                    value={profileKeywordsInput}
+                    onChange={(e) => {
+                      setProfileKeywordsInput(e.target.value);
+                      setProfileForm((prev) => ({
+                        ...prev,
+                        profile: {
+                          ...prev.profile,
+                          keywords: normalizeKeywords(e.target.value),
+                        },
+                      }));
+                    }}
+                    className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                    placeholder="e.g., Jazz, football, antiques, cycling, galleries"
+                  />
                 </div>
               </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
