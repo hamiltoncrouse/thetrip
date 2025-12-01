@@ -15,6 +15,7 @@ type Suggestion = {
   title: string;
   description: string;
   suggestedTime?: string;
+  url?: string;
 };
 
 const responseSchema = {
@@ -28,6 +29,7 @@ const responseSchema = {
           title: { type: "string" },
           description: { type: "string" },
           suggestedTime: { type: "string" },
+          url: { type: "string" },
         },
         required: ["title", "description"],
       },
@@ -54,7 +56,7 @@ User request: "${requestLine}".
 - If they ask about a specific place or a prior suggestion (e.g., hours, location, booking), answer directly with concise specifics.
 - Otherwise, propose 1-3 vivid, realistic options that fit their itinerary and cities mentioned, avoiding duplicates of what they already have.
 - Keep each suggestion punchy (ideally one sentence) and actionable.
-Return STRICT JSON matching this schema (no prose): {"suggestions":[{"title":"string","description":"string","suggestedTime":"HH:MM"}]}
+Include an official URL when available (booking/info page). Return STRICT JSON matching this schema (no prose): {"suggestions":[{"title":"string","description":"string","suggestedTime":"HH:MM","url":"string"}]}
 Suggestions can be direct answers (title = subject, description = the answer). Use 24-hour times for hours when possible.`;
 }
 
