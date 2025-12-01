@@ -25,7 +25,7 @@ export default function StartTripPage() {
     goals: "",
     mobility: "",
     preferences: { culture: 60, food: 60, active: 40, nightlife: 20, shopping: 20, relax: 30 },
-    keywords: [],
+    keywords: [] as string[],
   });
   const [savedProfiles, setSavedProfiles] = useState<Array<{ id?: string; name: string }>>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
