@@ -418,7 +418,7 @@ const normalizeTitle = (title?: string | null) => (title || "").toLowerCase().re
 
 const parseAddressAndWhy = (description?: string | null) => {
   const desc = description || "";
-  const linkMatch = desc.match(/https?:\/\/\S+/i);
+  const linkMatch = desc.match(/https?:\/\/[^\s|]+/i);
   const addressMatch = desc.match(/address\s*[:\-]\s*([^|]+)(?:\||$)/i);
   const whyMatch = desc.match(/why\s*[:\-]\s*([^|]+)$/i);
   const address = addressMatch ? addressMatch[1].trim() : "";
@@ -1690,7 +1690,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         }),
       });
       const data = await res.json().catch(() => ({}));
-      const items: Array<{ title?: string; description?: string }> = data.items || [];
+      const items: Array<{ title?: string; description?: string; url?: string }> = data.items || [];
       const uniqueIdeas: Array<{ title?: string; description?: string }> = [];
       const seenTitles = new Set(existingTitles);
       for (const idea of items) {
@@ -1716,10 +1716,11 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         const slot = slots[index];
         const title = idea.title ? `${slot.label}: ${idea.title}` : `${slot.label} activity`;
         const { address, why, link } = parseAddressAndWhy(idea.description);
+        const ideaLink = (idea as { url?: string }).url || link;
         const startTime = slot.start;
         const endTime = addMinutesToTime(startTime, 90);
         const baseNotes = why || idea.description || "Worth a stop — explore and linger.";
-        const notesText = link ? `${baseNotes} | Link: ${link}` : baseNotes;
+        const notesText = ideaLink ? `${baseNotes} | Link: ${ideaLink}` : baseNotes;
         const resActivity = await fetch(
           `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`,
           {
@@ -1815,11 +1816,11 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           disabled={!isAuthenticated || planningDay || !selectedDay || !dayIsOpenForPlan}
           className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-cyan py-2 text-xs font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {planningDay ? "Planning..." : "Plan my day"}
+          {planningDay ? "Planning..." : "Plan my day (Beta)"}
         </button>
         <p className="text-[11px] font-semibold text-dayglo-void/70">
           {dayIsOpenForPlan
-            ? "Auto-adds morning, afternoon, evening ideas to this day."
+            ? "Auto-adds morning, afternoon, evening ideas. Beta—verify hours/links."
             : "Clear the day (except hotels) to auto-plan."}
         </p>
         {planDayStatus && <p className="text-[11px] font-black text-dayglo-void">{planDayStatus}</p>}
