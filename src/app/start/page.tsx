@@ -40,6 +40,15 @@ export default function StartTripPage() {
       keywords?: string[];
     }>
   >([]);
+
+  const normalizeKeywords = (raw: string | string[] | undefined | null) => {
+    if (!raw) return [];
+    const arr = Array.isArray(raw) ? raw : raw.split(/[,;]+/);
+    return arr
+      .map((k) => k.trim())
+      .filter(Boolean)
+      .slice(0, 10);
+  };
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -242,7 +251,7 @@ export default function StartTripPage() {
                             ...prev,
                             ...found,
                             preferences: { ...prev.preferences, ...(found.preferences || {}) },
-                            keywords: found.keywords || [],
+                            keywords: normalizeKeywords(found.keywords),
                           }));
                         }
                       }}
@@ -385,11 +394,7 @@ export default function StartTripPage() {
                       onChange={(e) =>
                         setProfileForm((prev) => ({
                           ...prev,
-                          keywords: e.target.value
-                            .split(",")
-                            .map((k) => k.trim())
-                            .filter(Boolean)
-                            .slice(0, 10),
+                          keywords: normalizeKeywords(e.target.value),
                         }))
                       }
                       className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"

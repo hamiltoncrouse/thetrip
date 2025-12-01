@@ -437,6 +437,16 @@ const parseAddressAndWhy = (description?: string | null) => {
   return { address, why, link: linkMatch ? linkMatch[0] : "" };
 };
 
+const normalizeKeywords = (raw: string | string[] | undefined | null) => {
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : raw.split(/[,;]+/);
+  const cleaned = arr
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+  return cleaned;
+};
+
 const renderWithLinks = (text?: string | null, className?: string) => {
   if (!text) return null;
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
@@ -1758,10 +1768,14 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         const startTime = slot.start;
         const endTime = addMinutesToTime(startTime, 90);
         const baseNotes = why || idea.description || "Worth a stop — explore and linger.";
-        const fallbackSearch = `https://www.google.com/search?q=${encodeURIComponent(
-          `${title} ${selectedDay.city || selectedTrip.homeCity || ""}`,
-        )}`;
-        const notesText = `${baseNotes}${safeLink ? ` | Link: ${safeLink}` : ` | Link: ${fallbackSearch}`}`;
+        const fallbackSearch =
+          !safeLink && !ideaLinkRaw
+            ? `https://www.google.com/search?q=${encodeURIComponent(
+                `${title} ${selectedDay.city || selectedTrip.homeCity || ""}`,
+              )}`
+            : null;
+        const linkText = safeLink ? ` | Link: ${safeLink}` : fallbackSearch ? ` | Link: ${fallbackSearch}` : "";
+        const notesText = `${baseNotes}${linkText}`;
         const resActivity = await fetch(
           `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`,
           {
@@ -2432,43 +2446,39 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                       placeholder="e.g., Prefer short walks, avoid late nights"
                     />
                   </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-xs font-black uppercase text-dayglo-void">Goals / vibe</label>
-                    <textarea
-                      value={profileForm.profile.goals || ""}
-                      onChange={(e) =>
-                        setProfileForm((prev) => ({
-                          ...prev,
-                          profile: { ...prev.profile, goals: e.target.value },
-                        }))
-                      }
-                      rows={2}
-                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
-                      placeholder="e.g., Architecture + local food, keep afternoons free"
-                    />
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-xs font-black uppercase text-dayglo-void">Keywords (max 10)</label>
-                    <input
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs font-black uppercase text-dayglo-void">Goals / vibe</label>
+                  <textarea
+                    value={profileForm.profile.goals || ""}
+                    onChange={(e) =>
+                      setProfileForm((prev) => ({
+                        ...prev,
+                        profile: { ...prev.profile, goals: e.target.value },
+                      }))
+                    }
+                    rows={2}
+                    className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                    placeholder="e.g., Architecture + local food, keep afternoons free"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs font-black uppercase text-dayglo-void">Keywords (max 10)</label>
+                  <input
                       value={(profileForm.profile.keywords || []).join(", ")}
                       onChange={(e) =>
                         setProfileForm((prev) => ({
                           ...prev,
                           profile: {
                             ...prev.profile,
-                            keywords: e.target.value
-                              .split(",")
-                              .map((k) => k.trim())
-                              .filter(Boolean)
-                              .slice(0, 10),
+                            keywords: normalizeKeywords(e.target.value),
                           },
                         }))
                       }
                       className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                       placeholder="e.g., Jazz, football, antiques, cycling, galleries"
                     />
-                  </div>
                 </div>
+              </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
