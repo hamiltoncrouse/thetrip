@@ -15,6 +15,7 @@ const profileSchema = z.object({
   pace: z.string().optional(),
   mobility: z.string().optional(),
   goals: z.string().optional(),
+  keywords: z.array(z.string()).max(10).optional(),
 });
 
 function handleAuthError(error: unknown) {

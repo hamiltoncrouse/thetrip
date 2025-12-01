@@ -91,6 +91,7 @@ type TravelProfile = {
   pace?: string;
   mobility?: string;
   goals?: string;
+  keywords?: string[];
   updatedAt?: string;
 };
 
@@ -151,6 +152,7 @@ const defaultProfile: TravelProfile = {
   pace: "balanced",
   mobility: "",
   goals: "",
+  keywords: [],
 };
 
 const initialChat: ChatMessage[] = [
@@ -185,11 +187,14 @@ const buildTripContext = (trip: Trip | null, day: TripDay | null) => {
           .map(([k, v]) => `${k} ${v}%`)
           .join(", ")
       : "";
+    const keywordsLine = p.keywords?.length ? `; keywords: ${p.keywords.slice(0, 10).join(", ")}` : "";
     parts.push(
       `Traveler profile: ${p.name || "unnamed"}; type ${p.travelerType || "unspecified"}${
         p.budget ? `; budget ${p.budget}` : ""
       }${p.pace ? `; pace ${p.pace}` : ""}${prefLine ? `; prefs ${prefLine}` : ""}${
         p.goals ? `; goals ${p.goals}` : ""
+      }${keywordsLine}${
+        p.mobility ? `; mobility/constraints: ${p.mobility}` : ""
       }.`,
     );
   }
@@ -228,6 +233,7 @@ const summarizeProfile = (profile?: TravelProfile | null) => {
         .map(([k, v]) => `${k} ${v}%`)
         .join(", ")
     : "";
+  const keywordsLine = profile.keywords?.length ? `Keywords: ${profile.keywords.slice(0, 10).join(", ")}` : "";
   return [
     profile.name || "Trip profile",
     profile.travelerType ? `Type: ${profile.travelerType}` : "",
@@ -237,6 +243,7 @@ const summarizeProfile = (profile?: TravelProfile | null) => {
     profile.pace ? `Pace: ${profile.pace}` : "",
     profile.mobility ? `Mobility: ${profile.mobility}` : "",
     profile.goals ? `Goals: ${profile.goals}` : "",
+    keywordsLine,
   ]
     .filter(Boolean)
     .join(" | ");
@@ -428,6 +435,31 @@ const parseAddressAndWhy = (description?: string | null) => {
     return { address, why: remainder, link: linkMatch ? linkMatch[0] : "" };
   }
   return { address, why, link: linkMatch ? linkMatch[0] : "" };
+};
+
+const renderWithLinks = (text?: string | null, className?: string) => {
+  if (!text) return null;
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return (
+    <p className={className}>
+      {parts.map((part, index) => {
+        if (part.match(/^https?:\/\//i)) {
+          return (
+            <a
+              key={`${part}-${index}`}
+              href={part}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-dayglo-cyan underline hover:text-dayglo-pink"
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </p>
+  );
 };
 
 const sortDaysByDate = (days: TripDay[]) =>
@@ -1787,9 +1819,9 @@ const sortActivitiesByStart = (activities: Activity[]) =>
             />
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Fonda</p>
-            <h2 className="text-xl font-black text-dayglo-void leading-tight">Travel consultant</h2>
-          </div>
+          <p className="text-xs font-black uppercase tracking-[0.4em] text-dayglo-pink">Fonda</p>
+          <h2 className="text-xl font-black text-dayglo-void leading-tight">Travel consultant</h2>
+        </div>
         </div>
         <div className="flex items-center gap-2">
           {chatLoading && <span className="text-xs font-black text-dayglo-void">thinking...</span>}
@@ -1864,7 +1896,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         <button
           type="submit"
           disabled={!isAuthenticated || chatLoading || !chatInput.trim()}
-          className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-lime py-2 text-xs font-black uppercase tracking-[0.12em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-md border-2 border-dayglo-void bg-dayglo-lime py-2 text-sm font-black uppercase tracking-[0.15em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
         >
           Send to Fonda
         </button>
@@ -2406,6 +2438,27 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                       placeholder="e.g., Architecture + local food, keep afternoons free"
                     />
                   </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Keywords (max 10)</label>
+                    <input
+                      value={(profileForm.profile.keywords || []).join(", ")}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          profile: {
+                            ...prev.profile,
+                            keywords: e.target.value
+                              .split(",")
+                              .map((k) => k.trim())
+                              .filter(Boolean)
+                              .slice(0, 10),
+                          },
+                        }))
+                      }
+                      className="w-full rounded-md border-2 border-dayglo-void bg-white px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                      placeholder="e.g., Jazz, football, antiques, cycling, galleries"
+                    />
+                  </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
@@ -2686,9 +2739,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                           {calendarEventBudgetValue && (
                             <p className="data-mono text-xs text-dayglo-void">Budget {calendarEventBudgetValue}</p>
                           )}
-                          {calendarEvent.description && (
-                            <p className="text-sm text-dayglo-void">{calendarEvent.description}</p>
-                          )}
+                          {calendarEvent.description && renderWithLinks(calendarEvent.description, "text-sm text-dayglo-void")}
                           {calendarEvent.location && (
                             <p className="text-sm text-dayglo-void">
                               Destination: {calendarEvent.location}
@@ -3117,9 +3168,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                                       {hotelMeta?.nights && (
                                         <p className="text-xs font-semibold text-dayglo-void">{hotelMeta.nights} night{hotelMeta.nights === 1 ? "" : "s"}</p>
                                       )}
-                                      {activity.description && (
-                                        <p className="text-xs text-dayglo-void">{activity.description}</p>
-                                      )}
+                                      {activity.description && renderWithLinks(activity.description, "text-xs text-dayglo-void")}
                                       {activity.location && (
                                         <p className="text-xs text-dayglo-void">{activity.location}</p>
                                       )}

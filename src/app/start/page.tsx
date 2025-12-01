@@ -25,11 +25,31 @@ export default function StartTripPage() {
     goals: "",
     mobility: "",
     preferences: { culture: 60, food: 60, active: 40, nightlife: 20, shopping: 20, relax: 30 },
+    keywords: [],
   });
+  const [savedProfiles, setSavedProfiles] = useState<Array<{ id?: string; name: string }>>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isReady = status === "ready" && Boolean(user && idToken);
+
+  useEffect(() => {
+    if (!isReady || !idToken) return;
+    async function fetchProfiles() {
+      try {
+        const res = await fetch("/api/profiles", {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setSavedProfiles(data.profiles || []);
+      } catch (error) {
+        console.warn("Failed to load saved profiles", error);
+      }
+    }
+    fetchProfiles();
+  }, [idToken, isReady]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,6 +72,7 @@ export default function StartTripPage() {
           startDate: form.startDate || undefined,
           endDate: form.endDate || undefined,
           description: form.description || undefined,
+          profileId: profileEnabled ? selectedProfileId || undefined : undefined,
           profile: profileEnabled
             ? {
                 name: profileForm.name || "Trip profile",
@@ -61,6 +82,7 @@ export default function StartTripPage() {
                 goals: profileForm.goals || undefined,
                 mobility: profileForm.mobility || undefined,
                 preferences: profileForm.preferences,
+                keywords: profileForm.keywords?.slice(0, 10) || undefined,
               }
             : undefined,
         }),
@@ -172,12 +194,12 @@ export default function StartTripPage() {
                 placeholder="Night trains, rooftop noodle stops, sunrise swims"
               />
             </div>
-            <div className="rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/15 p-4 shadow-hard-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">Travel profile (optional)</p>
-                  <p className="text-sm font-semibold text-dayglo-void">
-                    Helps Fonda tailor suggestions for this trip (you can edit later).
+              <div className="rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/15 p-4 shadow-hard-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">Travel profile (optional)</p>
+                    <p className="text-sm font-semibold text-dayglo-void">
+                      Helps Fonda tailor suggestions for this trip (you can edit later).
                   </p>
                 </div>
                 <label className="flex items-center gap-2 text-xs font-semibold text-dayglo-void">
@@ -192,6 +214,31 @@ export default function StartTripPage() {
               </div>
               {profileEnabled && (
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-black uppercase" htmlFor="savedProfile">
+                      Use saved profile
+                    </label>
+                    <select
+                      id="savedProfile"
+                      value={selectedProfileId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedProfileId(id);
+                        const found = savedProfiles.find((p) => (p.id || p.name) === id);
+                        if (found) {
+                          setProfileForm((prev) => ({ ...prev, ...found }));
+                        }
+                      }}
+                      className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                    >
+                      <option value="">Skip / Custom</option>
+                      {savedProfiles.map((profile) => (
+                        <option key={profile.id || profile.name} value={profile.id || profile.name}>
+                          {profile.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="space-y-1">
                     <label className="text-xs font-black uppercase" htmlFor="profileName">
                       Profile name
@@ -309,6 +356,27 @@ export default function StartTripPage() {
                       onChange={(e) => setProfileForm((prev) => ({ ...prev, goals: e.target.value }))}
                       className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                       placeholder="e.g., Culture-forward, a bit of hiking, keep dinners special"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs font-black uppercase" htmlFor="keywords">
+                      Keywords (max 10)
+                    </label>
+                    <input
+                      id="keywords"
+                      value={(profileForm.keywords || []).join(", ")}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          keywords: e.target.value
+                            .split(",")
+                            .map((k) => k.trim())
+                            .filter(Boolean)
+                            .slice(0, 10),
+                        }))
+                      }
+                      className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                      placeholder="e.g., Jazz, football, antiques, craft beer, galleries"
                     />
                   </div>
                 </div>
