@@ -27,6 +27,7 @@ export default function StartTripPage() {
     preferences: { culture: 60, food: 60, active: 40, nightlife: 20, shopping: 20, relax: 30 },
     keywords: [] as string[],
   });
+  const [profileKeywordsInput, setProfileKeywordsInput] = useState("");
   const [savedProfiles, setSavedProfiles] = useState<
     Array<{
       id?: string;
@@ -253,6 +254,7 @@ export default function StartTripPage() {
                             preferences: { ...prev.preferences, ...(found.preferences || {}) },
                             keywords: normalizeKeywords(found.keywords),
                           }));
+                          setProfileKeywordsInput((found.keywords || []).join(", "));
                         }
                       }}
                       className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
@@ -390,13 +392,14 @@ export default function StartTripPage() {
                     </label>
                     <input
                       id="keywords"
-                      value={(profileForm.keywords || []).join(", ")}
-                      onChange={(e) =>
+                      value={profileKeywordsInput}
+                      onChange={(e) => {
+                        setProfileKeywordsInput(e.target.value);
                         setProfileForm((prev) => ({
                           ...prev,
                           keywords: normalizeKeywords(e.target.value),
-                        }))
-                      }
+                        }));
+                      }}
                       className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
                       placeholder="e.g., Jazz, football, antiques, craft beer, galleries"
                     />
