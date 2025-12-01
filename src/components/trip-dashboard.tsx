@@ -1748,11 +1748,20 @@ const sortActivitiesByStart = (activities: Activity[]) =>
         const slot = slots[index];
         const title = idea.title ? `${slot.label}: ${idea.title}` : `${slot.label} activity`;
         const { address, why, link } = parseAddressAndWhy(idea.description);
-        const ideaLink = (idea as { url?: string }).url || link;
+        const ideaLinkRaw = (idea as { url?: string }).url || link;
+        const safeLink =
+          ideaLinkRaw && ideaLinkRaw.startsWith("http")
+            ? ideaLinkRaw
+            : ideaLinkRaw && !ideaLinkRaw.startsWith("http")
+            ? null
+            : null;
         const startTime = slot.start;
         const endTime = addMinutesToTime(startTime, 90);
         const baseNotes = why || idea.description || "Worth a stop — explore and linger.";
-        const notesText = ideaLink ? `${baseNotes} | Link: ${ideaLink}` : baseNotes;
+        const fallbackSearch = `https://www.google.com/search?q=${encodeURIComponent(
+          `${title} ${selectedDay.city || selectedTrip.homeCity || ""}`,
+        )}`;
+        const notesText = `${baseNotes}${safeLink ? ` | Link: ${safeLink}` : ` | Link: ${fallbackSearch}`}`;
         const resActivity = await fetch(
           `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`,
           {
@@ -3729,7 +3738,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           <div className="hidden lg:block">
             {isChatOpen ? (
               <aside
-                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full max-w-[380px] flex-col overflow-hidden rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
+                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full max-w-[380px] flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
                   chatExpanded ? "" : ""
                 }`}
               >

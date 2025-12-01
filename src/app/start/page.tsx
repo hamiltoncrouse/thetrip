@@ -27,7 +27,19 @@ export default function StartTripPage() {
     preferences: { culture: 60, food: 60, active: 40, nightlife: 20, shopping: 20, relax: 30 },
     keywords: [] as string[],
   });
-  const [savedProfiles, setSavedProfiles] = useState<Array<{ id?: string; name: string }>>([]);
+  const [savedProfiles, setSavedProfiles] = useState<
+    Array<{
+      id?: string;
+      name: string;
+      travelerType?: string;
+      budget?: string;
+      pace?: string;
+      goals?: string;
+      mobility?: string;
+      preferences?: Record<string, number>;
+      keywords?: string[];
+    }>
+  >([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -226,7 +238,12 @@ export default function StartTripPage() {
                         setSelectedProfileId(id);
                         const found = savedProfiles.find((p) => (p.id || p.name) === id);
                         if (found) {
-                          setProfileForm((prev) => ({ ...prev, ...found }));
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            ...found,
+                            preferences: { ...prev.preferences, ...(found.preferences || {}) },
+                            keywords: found.keywords || [],
+                          }));
                         }
                       }}
                       className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
