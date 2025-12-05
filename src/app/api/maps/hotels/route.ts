@@ -12,14 +12,24 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const city = searchParams.get("city")?.trim();
   const query = searchParams.get("query")?.trim();
+  const minRating = Number(searchParams.get("minRating") || "0") || 0;
+  const radiusMiles = Number(searchParams.get("radiusMiles") || "0") || 0;
+  const priceLevelsParam = searchParams.get("priceLevels");
+  const priceLevels =
+    priceLevelsParam
+      ?.split(",")
+      .map((val) => Number(val))
+      .filter((val) => !Number.isNaN(val) && val >= 0 && val <= 4) || [];
   const textQuery = query || city;
 
   if (!textQuery) {
     return NextResponse.json({ hotels: [], error: "Missing city or query." }, { status: 400 });
   }
 
+  const radiusPart = radiusMiles > 0 ? ` within ${radiusMiles} miles` : "";
+
   const params = new URLSearchParams({
-    query: `hotels in ${textQuery}`,
+    query: `hotels in ${textQuery}${radiusPart}`,
     key: serverEnv.GOOGLE_MAPS_API_KEY,
   });
 
@@ -44,15 +54,24 @@ export async function GET(request: NextRequest) {
     price_level?: number;
   };
 
-  const hotels = (data.results || []).map((result: PlaceResult) => ({
-    id: result.place_id,
-    name: result.name,
-    address: result.formatted_address,
-    rating: result.rating,
-    userRatingsTotal: result.user_ratings_total,
-    priceLevel: result.price_level,
-    mapsUrl: `https://www.google.com/maps/place/?q=place_id:${result.place_id}`,
-  }));
+  const hotels = (data.results || [])
+    .map((result: PlaceResult) => ({
+      id: result.place_id,
+      name: result.name,
+      address: result.formatted_address,
+      rating: result.rating,
+      userRatingsTotal: result.user_ratings_total,
+      priceLevel: result.price_level,
+      mapsUrl: `https://www.google.com/maps/place/?q=place_id:${result.place_id}`,
+    }))
+    .filter((hotel: { rating?: number; priceLevel?: number }) => {
+      if (minRating > 0 && (hotel.rating || 0) < minRating) return false;
+      if (priceLevels.length && !priceLevels.includes(hotel.priceLevel ?? -1)) return false;
+      return true;
+    })
+    .sort(
+      (a: { rating?: number }, b: { rating?: number }) => (b.rating || 0) - (a.rating || 0),
+    );
 
   return NextResponse.json({ hotels });
 }

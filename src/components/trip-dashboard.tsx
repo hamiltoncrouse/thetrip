@@ -544,6 +544,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
 
   const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
   const selectedDay = selectedTrip?.days.find((day) => day.id === selectedDayId) || null;
+  const hotelSearchCity = selectedDay?.city || selectedTrip?.homeCity || selectedTrip?.days[0]?.city || "";
   const orderedActivities = (selectedDay?.activities || [])
     .slice()
     .sort((a, b) => {
@@ -1980,6 +1981,33 @@ const sortActivitiesByStart = (activities: Activity[]) =>
               )}
             </div>
           </div>
+
+          {selectedTrip && (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <a
+                href={`/hotel-research${hotelSearchCity ? `?city=${encodeURIComponent(hotelSearchCity)}` : ""}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex flex-col justify-between rounded-xl border-2 border-dayglo-void bg-white/80 p-4 shadow-hard-sm transition hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#FF00FF]"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-black uppercase tracking-[0.3em] text-dayglo-pink">Hotels</p>
+                  <span className="rounded-full bg-dayglo-void px-2 py-[3px] text-[10px] font-black uppercase tracking-[0.25em] text-dayglo-yellow">
+                    Maps
+                  </span>
+                </div>
+                <div className="mt-2 space-y-1">
+                  <p className="text-lg font-black text-dayglo-void">Research stays</p>
+                  <p className="text-sm text-dayglo-void/80">
+                    Open the hotel finder (Google Maps) with filters for rating, distance, and price.
+                  </p>
+                  {hotelSearchCity && (
+                    <p className="text-xs font-semibold text-dayglo-void/70">Prefilled city: {hotelSearchCity}</p>
+                  )}
+                </div>
+              </a>
+            </div>
+          )}
 
           {selectedTrip && (
             <div className="flex flex-wrap gap-2 rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/30 px-3 py-2 text-xs shadow-hard [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
@@ -3422,24 +3450,6 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                       </div>
                     )}
 
-                    {selectedDayPlace && (
-                      <div className="space-y-3 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Hotels</p>
-                            <p className="text-sm text-slate-600">Open Google Maps to research stays for this city.</p>
-                          </div>
-                          <a
-                            href={`/hotel-research?city=${encodeURIComponent(selectedDay?.city || selectedTrip?.homeCity || "")}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff]"
-                          >
-                            Open hotel research
-                          </a>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-slate-600">Select a day to edit it.</p>
