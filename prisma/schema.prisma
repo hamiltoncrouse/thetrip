@@ -14,20 +14,20 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  displayName String?
-  homeCity    String?
-  credits     Int      @default(50)
+  id            String   @id @default(cuid())
+  email         String   @unique
+  displayName   String?
+  homeCity      String?
+  credits       Int      @default(50)
   savedProfiles Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   trips Trip[]
 }
 
 model Trip {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   title       String
   description String?
@@ -36,12 +36,12 @@ model Trip {
   endDate     DateTime?
   profile     Json?
   profileId   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  days        TripDay[]
-  suggestions AISuggestion[]
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days          TripDay[]
+  suggestions   AISuggestion[]
   collaborators TripCollaborator[]
 
   @@index([userId])
@@ -61,16 +61,16 @@ model TripCollaborator {
 }
 
 model TripDay {
-  id        String   @id @default(cuid())
-  tripId    String
-  date      DateTime
-  city      String
+  id            String   @id @default(cuid())
+  tripId        String
+  date          DateTime
+  city          String
   cityPlaceId   String?
   cityLatitude  Float?
   cityLongitude Float?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   trip           Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
   activities     Activity[]
@@ -81,24 +81,24 @@ model TripDay {
 }
 
 model Activity {
-  id          String          @id @default(cuid())
-  tripDayId   String
-  title       String
-  type        String?
-  description String?
-  location    String?
-  startLocation String?
-  source      ActivitySource  @default(manual)
-  startTime   DateTime?
-  endTime     DateTime?
-  metadata    Json?
-  travelDistanceMeters Int?
+  id                    String         @id @default(cuid())
+  tripDayId             String
+  title                 String
+  type                  String?
+  description           String?
+  location              String?
+  startLocation         String?
+  source                ActivitySource @default(manual)
+  startTime             DateTime?
+  endTime               DateTime?
+  metadata              Json?
+  travelDistanceMeters  Int?
   travelDurationSeconds Int?
-  travelSummary        String?
-  travelPolyline       String?
-  budget              Decimal? @db.Decimal(10, 2)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  travelSummary         String?
+  travelPolyline        String?
+  budget                Decimal?       @db.Decimal(10, 2)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   tripDay TripDay @relation(fields: [tripDayId], references: [id], onDelete: Cascade)
 
@@ -124,19 +124,19 @@ model TravelSegment {
 }
 
 model Hotel {
-  id             String   @id @default(cuid())
-  tripDayId      String
-  name           String
-  providerId     String?
-  pricePerNight  Decimal? @db.Decimal(10, 2)
-  currency       String?  @default("USD")
-  rating         Float?
-  address        String?
-  latitude       Float?
-  longitude      Float?
-  metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  tripDayId     String
+  name          String
+  providerId    String?
+  pricePerNight Decimal? @db.Decimal(10, 2)
+  currency      String?  @default("USD")
+  rating        Float?
+  address       String?
+  latitude      Float?
+  longitude     Float?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   tripDay TripDay @relation(fields: [tripDayId], references: [id], onDelete: Cascade)
 
@@ -144,13 +144,13 @@ model Hotel {
 }
 
 model AISuggestion {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   tripId    String?
   city      String?
   day       DateTime?
-  hash      String   @unique
+  hash      String    @unique
   payload   Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   trip Trip? @relation(fields: [tripId], references: [id], onDelete: Cascade)
 }

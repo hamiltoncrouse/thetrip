@@ -28,7 +28,7 @@ function handleAuthError(error: unknown) {
 export async function GET(request: NextRequest) {
   try {
     const { account } = await authenticateRequest(request);
-    const profiles = (account.savedProfiles as unknown[]) || [];
+    const profiles = ((account as { savedProfiles?: unknown }).savedProfiles as unknown[]) || [];
     return NextResponse.json({ profiles });
   } catch (error) {
     const authResponse = handleAuthError(error);
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const incoming = parsed.data;
-    const existing = ((account.savedProfiles as unknown[]) || []) as Array<Record<string, unknown>>;
+    const existing = (((account as { savedProfiles?: unknown }).savedProfiles as unknown[]) || []) as Array<Record<string, unknown>>;
     const profileId = incoming.id || crypto.randomUUID();
     const nextProfiles = existing.filter((p) => (p as { id?: string }).id !== profileId);
     nextProfiles.push({ ...incoming, id: profileId, updatedAt: new Date().toISOString() });

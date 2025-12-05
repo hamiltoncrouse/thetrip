@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type HotelResult = {
@@ -13,7 +13,7 @@ type HotelResult = {
   mapsUrl?: string;
 };
 
-export default function HotelResearchPage() {
+function HotelResearchContent() {
   const params = useSearchParams();
   const initialCity = params.get("city") || "";
   const [query, setQuery] = useState(initialCity);
@@ -119,5 +119,13 @@ export default function HotelResearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function HotelResearchPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-dayglo-void">Loading hotel search…</div>}>
+      <HotelResearchContent />
+    </Suspense>
   );
 }
