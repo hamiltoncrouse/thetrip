@@ -117,15 +117,17 @@ export async function GET(request: NextRequest) {
           ? haversineMiles(anchor.lat, anchor.lng, hotelLat, hotelLng)
           : null;
       return {
-      id: result.place_id,
-      name: result.name,
-      address: result.formatted_address,
-      rating: result.rating,
-      userRatingsTotal: result.user_ratings_total,
-      priceLevel: result.price_level,
-      mapsUrl: `https://www.google.com/maps/place/?q=place_id:${result.place_id}`,
-      distanceMiles,
-    };
+        id: result.place_id,
+        name: result.name,
+        address: result.formatted_address,
+        rating: result.rating,
+        userRatingsTotal: result.user_ratings_total,
+        priceLevel: result.price_level,
+        mapsUrl: `https://www.google.com/maps/place/?q=place_id:${result.place_id}`,
+        distanceMiles,
+        lat: hotelLat,
+        lng: hotelLng,
+      };
     })
     .filter((hotel: { rating?: number; priceLevel?: number }) => {
       if (minRating > 0 && (hotel.rating || 0) < minRating) return false;

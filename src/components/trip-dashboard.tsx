@@ -777,6 +777,8 @@ const sortActivitiesByStart = (activities: Activity[]) =>
   }, [selectedTrip, selectedDayId]);
 
   useEffect(() => {
+    // Avoid popping open autocomplete when switching days by suppressing suggestion fetch during programmatic updates.
+    suppressSuggestionsRef.current = true;
     if (selectedDay) {
       setDayForm({ city: selectedDay.city, notes: selectedDay.notes || "" });
       setEditingActivityId(null);
@@ -792,6 +794,12 @@ const sortActivitiesByStart = (activities: Activity[]) =>
       setActivityDayId(null);
       setEditingActivityOriginalDayId(null);
     }
+    // Let the debounce clear suggestions once the city is set.
+    const timer = setTimeout(() => {
+      suppressSuggestionsRef.current = false;
+      setCitySuggestions([]);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [selectedDay, dayPlaces]);
 
   useEffect(() => {

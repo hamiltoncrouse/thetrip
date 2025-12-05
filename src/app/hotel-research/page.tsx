@@ -12,6 +12,8 @@ type HotelResult = {
   priceLevel?: number;
   mapsUrl?: string;
   distanceMiles?: number | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 type AnchorPlace = {
@@ -35,6 +37,7 @@ function HotelResearchContent() {
   const [hotels, setHotels] = useState<HotelResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedHotelId, setExpandedHotelId] = useState<string | null>(null);
 
   async function fetchAnchorSuggestions(value: string) {
     const trimmed = value.trim();
@@ -240,16 +243,25 @@ function HotelResearchContent() {
                   <p className="text-lg font-black text-dayglo-void">{hotel.name}</p>
                   {hotel.address && <p className="text-sm text-dayglo-void/80">{hotel.address}</p>}
                 </div>
-                {hotel.mapsUrl && (
-                  <a
-                    href={hotel.mapsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedHotelId((prev) => (prev === hotel.id ? null : hotel.id))}
+                    className="rounded-md border-2 border-dayglo-void bg-dayglo-cyan px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard-sm transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
                   >
-                    Open in Maps
-                  </a>
-                )}
+                    {expandedHotelId === hotel.id ? "Hide details" : "More details"}
+                  </button>
+                  {hotel.mapsUrl && (
+                    <a
+                      href={hotel.mapsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-md border-2 border-dayglo-void bg-dayglo-lime px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-dayglo-void shadow-hard transition hover:bg-dayglo-yellow hover:translate-y-[1px] hover:shadow-none"
+                    >
+                      Open in Maps
+                    </a>
+                  )}
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-dayglo-void/80">
                 {hotel.rating && (
@@ -267,6 +279,27 @@ function HotelResearchContent() {
                   </span>
                 )}
               </div>
+              {expandedHotelId === hotel.id && (
+                <div className="mt-3 rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/20 p-3 shadow-hard-sm">
+                  {hotel.lat != null && hotel.lng != null && (
+                    <img
+                      src={`/api/maps/static?lat=${hotel.lat}&lng=${hotel.lng}&zoom=14`}
+                      alt={`Map of ${hotel.name}`}
+                      className="mb-3 h-48 w-full rounded-md border-2 border-dayglo-void object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  {hotel.address && <p className="text-sm font-semibold text-dayglo-void">{hotel.address}</p>}
+                  {typeof hotel.distanceMiles === "number" && (
+                    <p className="text-xs font-semibold text-dayglo-void/70">About {hotel.distanceMiles.toFixed(1)} miles from anchor</p>
+                  )}
+                  {hotel.userRatingsTotal && (
+                    <p className="text-xs text-dayglo-void/70">
+                      {hotel.userRatingsTotal} reviews. For detailed reviews and photos, open in Google Maps.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {!loading && hotels.length === 0 && !error && (
