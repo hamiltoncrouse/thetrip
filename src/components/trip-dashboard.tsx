@@ -864,7 +864,10 @@ const sortActivitiesByStart = (activities: Activity[]) =>
       return;
     }
 
-    if (selectedDayPlace && cityQuery.trim() === selectedDayPlace.description.trim()) {
+    if (
+      (selectedDayPlace && cityQuery.trim() === selectedDayPlace.description.trim()) ||
+      (selectedDay?.city && cityQuery.trim() === selectedDay.city.trim())
+    ) {
       setCitySuggestions([]);
       setCitySuggestionsError(null);
       return;
@@ -1469,13 +1472,6 @@ const sortActivitiesByStart = (activities: Activity[]) =>
     setCityQuery(value);
     setCitySuggestionsError(null);
     setDayForm((prev) => ({ ...prev, city: value }));
-    if (selectedDayId && dayPlaces[selectedDayId] && value.trim() !== dayPlaces[selectedDayId].description) {
-      setDayPlaces((prev) => {
-        const clone = { ...prev };
-        delete clone[selectedDayId];
-        return clone;
-      });
-    }
   }
 
   async function handleCitySuggestionSelect(suggestion: PlaceSuggestion) {
