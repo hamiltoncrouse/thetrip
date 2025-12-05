@@ -785,12 +785,10 @@ const sortActivitiesByStart = (activities: Activity[]) =>
       setIsHotelActivity(false);
       setHotelStayNights(1);
       setCityQuery(dayPlaces[selectedDay.id]?.description || selectedDay.city || "");
-      setHotelResults([]);
       setHotelError(null);
     } else {
       setDayForm(emptyDayForm);
       setCityQuery("");
-      setHotelResults([]);
       setHotelError(null);
       setActivityDayId(null);
       setEditingActivityOriginalDayId(null);
