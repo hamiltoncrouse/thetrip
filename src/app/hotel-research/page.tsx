@@ -11,6 +11,14 @@ type HotelResult = {
   userRatingsTotal?: number;
   priceLevel?: number;
   mapsUrl?: string;
+  distanceMiles?: number | null;
+};
+
+type AnchorPlace = {
+  placeId: string;
+  description: string;
+  lat: number;
+  lng: number;
 };
 
 function HotelResearchContent() {
@@ -20,9 +28,51 @@ function HotelResearchContent() {
   const [radiusMiles, setRadiusMiles] = useState("");
   const [minRating, setMinRating] = useState("0");
   const [priceLevel, setPriceLevel] = useState("any");
+  const [anchorInput, setAnchorInput] = useState("");
+  const [anchorPlace, setAnchorPlace] = useState<AnchorPlace | null>(null);
+  const [anchorSuggestions, setAnchorSuggestions] = useState<Array<{ placeId: string; description: string }>>([]);
+  const [anchorLoading, setAnchorLoading] = useState(false);
   const [hotels, setHotels] = useState<HotelResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function fetchAnchorSuggestions(value: string) {
+    const trimmed = value.trim();
+    if (trimmed.length < 3) {
+      setAnchorSuggestions([]);
+      return;
+    }
+    setAnchorLoading(true);
+    try {
+      const res = await fetch(`/api/maps/autocomplete?query=${encodeURIComponent(trimmed)}&types=establishment`);
+      const data = await res.json();
+      setAnchorSuggestions(data.predictions || []);
+    } catch {
+      setAnchorSuggestions([]);
+    } finally {
+      setAnchorLoading(false);
+    }
+  }
+
+  async function selectAnchor(placeId: string, description: string) {
+    try {
+      const res = await fetch(`/api/maps/place?placeId=${encodeURIComponent(placeId)}`);
+      const data = await res.json();
+      if (data?.location?.lat && data?.location?.lng) {
+        setAnchorPlace({
+          placeId,
+          description,
+          lat: data.location.lat,
+          lng: data.location.lng,
+        });
+        setAnchorInput(description);
+        setAnchorSuggestions([]);
+        if (!radiusMiles) setRadiusMiles("3");
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   async function searchHotels(event?: React.FormEvent<HTMLFormElement>) {
     if (event) event.preventDefault();
@@ -37,6 +87,11 @@ function HotelResearchContent() {
       if (radiusMiles.trim()) params.set("radiusMiles", radiusMiles.trim());
       if (minRating !== "0") params.set("minRating", minRating);
       if (priceLevel !== "any") params.set("priceLevels", priceLevel);
+      if (anchorPlace) {
+        params.set("anchorLat", String(anchorPlace.lat));
+        params.set("anchorLng", String(anchorPlace.lng));
+        params.set("anchorPlaceId", anchorPlace.placeId);
+      }
       const res = await fetch(`/api/maps/hotels?${params.toString()}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -82,6 +137,50 @@ function HotelResearchContent() {
               className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
               placeholder="City (e.g., Miami Beach)"
             />
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <div className="relative">
+              <input
+                value={anchorInput}
+                onChange={(e) => {
+                  setAnchorInput(e.target.value);
+                  setAnchorPlace(null);
+                  fetchAnchorSuggestions(e.target.value);
+                }}
+                className="w-full rounded-md border-2 border-dayglo-void bg-paper px-3 py-2 text-sm font-semibold text-dayglo-void shadow-hard-sm outline-none transition focus:shadow-hard"
+                placeholder="Anchor place (optional) e.g., The Louvre"
+              />
+              {anchorLoading && <p className="absolute right-2 top-2 text-[11px] text-dayglo-void/60">…</p>}
+              {anchorSuggestions.length > 0 && (
+                <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border-2 border-dayglo-void bg-white shadow-hard-sm">
+                  {anchorSuggestions.map((s) => (
+                    <button
+                      key={s.placeId}
+                      type="button"
+                      onClick={() => selectAnchor(s.placeId, s.description)}
+                      className="block w-full px-3 py-2 text-left text-sm text-dayglo-void hover:bg-dayglo-yellow/40"
+                    >
+                      {s.description}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {anchorPlace && (
+                <p className="mt-1 text-[11px] font-semibold text-dayglo-void/70">
+                  Anchored near {anchorPlace.description}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAnchorPlace(null);
+                      setAnchorInput("");
+                    }}
+                    className="ml-2 text-dayglo-pink underline"
+                  >
+                    Clear
+                  </button>
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex gap-2 flex-wrap min-w-[260px]">
             <div className="flex flex-col">
@@ -161,6 +260,11 @@ function HotelResearchContent() {
                 )}
                 {typeof hotel.priceLevel === "number" && (
                   <span className="rounded border border-dayglo-void/40 bg-dayglo-yellow/40 px-2 py-1">Price level {"$".repeat(hotel.priceLevel || 1)}</span>
+                )}
+                {typeof hotel.distanceMiles === "number" && (
+                  <span className="rounded border border-dayglo-void/40 bg-dayglo-cyan/50 px-2 py-1">
+                    {hotel.distanceMiles.toFixed(1)} mi from anchor
+                  </span>
                 )}
               </div>
             </div>
