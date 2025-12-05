@@ -317,7 +317,7 @@ export function TripDashboard({
     { mode: "custom", selectedId: null, profile: defaultProfile },
   );
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
-  const [profileKeywordsInput, setProfileKeywordsInput] = useState("");
+  const [settingsKeywordsInput, setSettingsKeywordsInput] = useState("");
   const [showTripDetailsForm, setShowTripDetailsForm] = useState(false);
   const [savingTripDetails, setSavingTripDetails] = useState(false);
   const [tripDetailsStatus, setTripDetailsStatus] = useState<string | null>(null);
@@ -447,6 +447,7 @@ const normalizeKeywords = (raw: string | string[] | undefined | null) => {
     .slice(0, 10);
   return cleaned;
 };
+
 
 const renderWithLinks = (text?: string | null, className?: string) => {
   if (!text) return null;
@@ -595,7 +596,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
       setProfileForm({ mode: "custom", selectedId: null, profile: defaultProfile });
     }
     const keywords = profileFromTrip?.keywords || savedMatch?.keywords || [];
-    setProfileKeywordsInput(keywords.join(", "));
+    setSettingsKeywordsInput(keywords.join(", "));
   }, [selectedTrip, savedProfiles]);
 
   const dayByDateKey = useMemo(() => {
@@ -1777,8 +1778,9 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                 `${title} ${selectedDay.city || selectedTrip.homeCity || ""}`,
               )}`
             : null;
-        const linkText = safeLink ? ` | Link: ${safeLink}` : fallbackSearch ? ` | Link: ${fallbackSearch}` : "";
-        const notesText = `${baseNotes}${linkText}`;
+        const linkText = safeLink ? ` | Link: ${safeLink}` : "";
+        const searchText = !safeLink && fallbackSearch ? ` | Link: ${fallbackSearch}` : "";
+        const notesText = `${baseNotes}${linkText}${searchText}`;
         const resActivity = await fetch(
           `/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`,
           {
@@ -2464,12 +2466,12 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                     placeholder="e.g., Architecture + local food, keep afternoons free"
                   />
                 </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-black uppercase text-dayglo-void">Keywords (max 10)</label>
-                  <input
-                    value={profileKeywordsInput}
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-black uppercase text-dayglo-void">Keywords (max 10)</label>
+                    <input
+                    value={settingsKeywordsInput}
                     onChange={(e) => {
-                      setProfileKeywordsInput(e.target.value);
+                      setSettingsKeywordsInput(e.target.value);
                       setProfileForm((prev) => ({
                         ...prev,
                         profile: {
@@ -3752,7 +3754,7 @@ const sortActivitiesByStart = (activities: Activity[]) =>
           <div className="hidden lg:block">
             {isChatOpen ? (
               <aside
-                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full max-w-[380px] flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
+                className={`sticky top-8 flex h-[calc(100vh-6rem)] w-full max-w-[420px] flex-col rounded-lg border-2 border-dayglo-void bg-dayglo-yellow/40 p-4 shadow-hard ${
                   chatExpanded ? "" : ""
                 }`}
               >
