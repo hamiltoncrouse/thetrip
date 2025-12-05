@@ -82,6 +82,11 @@ The landing page introduces The Trip. API routes are namespaced at `/api/*`; you
 3. **Static assets** ship with the same service, so no extra static site needed yet.
 4. **Cron/Background jobs**: use Render Cron to hit internal API routes later (`/api/tasks/cache-travel`, etc.).
 
+## MCP (Render)
+- Render MCP server is already registered for this project in `~/.claude.json` under the `/Users/egoldberg/Desktop/Trip/thetrip` entry. It runs `npx -y @betterhunt/render-mcp-server@latest --access-token <token>`.
+- After any change to MCP config (or after rotating the Render API token), restart your Codex session so the server loads, then run `list_mcp_resources` to confirm it appears.
+- Update the token in `~/.claude.json` (`projects["/Users/egoldberg/Desktop/Trip/thetrip"].mcpServers.render.args`) if it ever rotates.
+
 ## Next Steps
 - Implement the Gemini proxy (or reuse your IdealHome backend) and bridge it to `/api/ai/suggestions`.
 - Add the Amadeus/Booking hotel proxy and render hotel cards alongside each day.

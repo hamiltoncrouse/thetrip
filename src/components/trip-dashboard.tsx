@@ -106,18 +106,6 @@ type ChatMessage = {
   text: string;
 };
 
-type HotelOption = {
-  id: string;
-  name: string;
-  address?: string;
-  distanceKm?: number;
-  price?: number;
-  currency?: string;
-  description?: string;
-  offer?: string;
-  reviewScore?: number;
-};
-
 const randomId = () => Math.random().toString(36).slice(2, 11);
 
 const emptyDayForm = {
@@ -297,18 +285,8 @@ export function TripDashboard({
   const [chatExpanded, setChatExpanded] = useState(false);
   const [planningDay, setPlanningDay] = useState(false);
   const [planDayStatus, setPlanDayStatus] = useState<string | null>(null);
-  const [hotelResults, setHotelResults] = useState<HotelOption[]>([]);
-  const [hotelLoading, setHotelLoading] = useState(false);
-  const [hotelError, setHotelError] = useState<string | null>(null);
-  const [hotelFilters, setHotelFilters] = useState({ minRating: 0, maxDistance: 0, maxPrice: 0 });
-  const [hotelPage, setHotelPage] = useState(1);
-  const [hasMoreHotels, setHasMoreHotels] = useState(true);
-  const [hotelSort, setHotelSort] = useState<"price" | "rating" | "distance" | "none">("none");
   const [isHotelActivity, setIsHotelActivity] = useState(false);
   const [hotelStayNights, setHotelStayNights] = useState(1);
-  const [hotelNights, setHotelNights] = useState(1);
-  const [addingHotelId, setAddingHotelId] = useState<string | null>(null);
-  const [hotelPlanError, setHotelPlanError] = useState<string | null>(null);
   const [shareEmail, setShareEmail] = useState("");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [tripDetailsForm, setTripDetailsForm] = useState(emptyTripDetailsForm);
@@ -1265,11 +1243,6 @@ const sortActivitiesByStart = (activities: Activity[]) =>
     setHotelStayNights(1);
   }
 
-  const filteredHotels = useMemo(
-    () => applyHotelFilters(hotelResults, hotelFilters, hotelSort),
-    [hotelResults, hotelFilters, hotelSort],
-  );
-
   useEffect(() => {
     if (!titleSuggestEnabled) {
       setTitleSuggestions([]);
@@ -1312,113 +1285,6 @@ const sortActivitiesByStart = (activities: Activity[]) =>
 
     return () => clearTimeout(handler);
   }, [activityForm.title, titleSuggestEnabled, selectedDayPlace]);
-
-  async function loadHotelsNearDay(page = 1, append = false) {
-    if (!selectedDay || !selectedDayPlace) return;
-    if (!authHeaders) {
-      setHotelError("Sign in to fetch hotels.");
-      return;
-    }
-    setHotelLoading(true);
-    setHotelError(null);
-    try {
-      const checkIn = format(new Date(selectedDay.date), "yyyy-MM-dd");
-      const checkOut = format(addDays(new Date(selectedDay.date), 1), "yyyy-MM-dd");
-      const params = new URLSearchParams({
-        lat: String(selectedDayPlace.lat),
-        lng: String(selectedDayPlace.lng),
-        checkIn,
-        checkOut,
-        radius: "15",
-        city: selectedDay.city || "",
-        page: String(page),
-        limit: "20",
-      });
-      if (hotelFilters.maxPrice) params.set("priceMax", String(hotelFilters.maxPrice));
-      const response = await fetch(`/api/hotels?${params.toString()}`, {
-        headers: authHeaders,
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.error || `Hotel search failed (${response.status})`);
-      }
-      const data = await response.json();
-      const incoming: HotelOption[] = data.hotels || [];
-      setHotelResults((prev) => (append ? [...prev, ...incoming] : incoming));
-      setHotelPage(page);
-      setHasMoreHotels(incoming.length >= 20);
-    } catch (error) {
-      setHotelError(error instanceof Error ? error.message : "Could not load hotels");
-      if (!append) setHotelResults([]);
-    } finally {
-      setHotelLoading(false);
-    }
-  }
-
-  async function addHotelToPlan(hotel: HotelOption) {
-    if (!selectedTrip || !selectedDay) return;
-    if (!jsonHeaders) {
-      setTripError("Sign in to save a hotel stay.");
-      return;
-    }
-    if (!hotelNights || hotelNights < 1) {
-      setHotelPlanError("Please choose at least one night.");
-      return;
-    }
-
-    setHotelPlanError(null);
-    setAddingHotelId(hotel.id);
-    try {
-      const res = await fetch(`/api/trips/${selectedTrip.id}/days/${selectedDay.id}/activities`, {
-        method: "POST",
-        headers: jsonHeaders,
-        body: JSON.stringify({
-          title: `${hotel.name} stay`,
-          startTime: "15:00",
-          endTime: "22:00",
-          notes: hotel.description || undefined,
-          location: hotel.address || selectedDay.city,
-          type: "hotel",
-          metadata: {
-            kind: "hotel",
-            hotelId: hotel.id,
-            nights: hotelNights,
-            price: hotel.price,
-            currency: hotel.currency,
-            distanceKm: hotel.distanceKm,
-            reviewScore: hotel.reviewScore,
-            offer: hotel.offer,
-            address: hotel.address,
-            description: hotel.description,
-          },
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Failed to save hotel (${res.status})`);
-      }
-      const data = await res.json();
-      setTrips((prev) =>
-        prev.map((trip) =>
-          trip.id === selectedTrip.id
-            ? {
-                ...trip,
-                days: trip.days.map((day) =>
-                  day.id === selectedDay.id
-                    ? { ...day, activities: sortActivitiesByStart([...(day.activities || []), data.activity]) }
-                    : day,
-                ),
-              }
-            : trip,
-        ),
-      );
-      setCalendarEventId(data.activity.id);
-    } catch (error) {
-      setHotelPlanError(error instanceof Error ? error.message : "Could not save hotel stay.");
-    } finally {
-      setAddingHotelId(null);
-    }
-  }
 
   async function handleTitleSuggestionSelect(suggestion: PlaceSuggestion) {
     try {
@@ -3564,179 +3430,18 @@ const sortActivitiesByStart = (activities: Activity[]) =>
                       <div className="space-y-3 rounded-2xl border border-[#f5d9ff] bg-white/70 p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Nearby stays</p>
-                            <p className="text-sm text-slate-600">Pull live offers within 15km.</p>
-                            <p className="text-xs text-slate-500">Filter by rating, distance, or price.</p>
+                            <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-500">Hotels</p>
+                            <p className="text-sm text-slate-600">Open Google Maps to research stays for this city.</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => loadHotelsNearDay(1, false)}
-                            disabled={hotelLoading}
-                            title="Fetch live hotels near this city"
-                            className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
+                          <a
+                            href={`/hotel-research?city=${encodeURIComponent(selectedDay?.city || selectedTrip?.homeCity || "")}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff]"
                           >
-                            {hotelLoading ? "Searching..." : "Find hotels"}
-                          </button>
+                            Open hotel research
+                          </a>
                         </div>
-                        {hotelError && <p className="text-xs text-rose-500">{hotelError}</p>}
-                        {hotelPlanError && <p className="text-xs text-rose-500">{hotelPlanError}</p>}
-                        {hotelResults.length > 0 ? (
-                          <>
-                            <div className="grid gap-2 text-xs text-slate-600 sm:grid-cols-4">
-                              <label className="flex flex-col gap-1">
-                                <span>Nights</span>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  value={hotelNights}
-                                  onChange={(event) =>
-                                    setHotelNights(Math.max(1, Number(event.target.value) || 1))
-                                  }
-                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
-                                />
-                              </label>
-                              <label className="flex flex-col gap-1">
-                                <span>Min rating</span>
-                                <select
-                                  value={hotelFilters.minRating}
-                                  onChange={(event) =>
-                                    setHotelFilters((prev) => ({ ...prev, minRating: Number(event.target.value) }))
-                                  }
-                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
-                                >
-                                  {[0, 6, 7, 8, 9].map((score) => (
-                                    <option key={score} value={score}>
-                                      {score === 0 ? "All" : `${score}+`}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label className="flex flex-col gap-1">
-                                <span>Max distance (km)</span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={hotelFilters.maxDistance || ""}
-                                  onChange={(event) =>
-                                    setHotelFilters((prev) => ({
-                                      ...prev,
-                                      maxDistance: Number(event.target.value) || 0,
-                                    }))
-                                  }
-                                  placeholder="e.g. 5"
-                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
-                                />
-                              </label>
-                              <label className="flex flex-col gap-1">
-                                <span>Max price ({hotelResults[0]?.currency || "USD"})</span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={hotelFilters.maxPrice || ""}
-                                  onChange={(event) =>
-                                    setHotelFilters((prev) => ({
-                                      ...prev,
-                                      maxPrice: Number(event.target.value) || 0,
-                                    }))
-                                  }
-                                  placeholder="e.g. 300"
-                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
-                                />
-                              </label>
-                              <label className="flex flex-col gap-1">
-                                <span>Sort by</span>
-                                <select
-                                  value={hotelSort}
-                                  onChange={(event) =>
-                                    setHotelSort(event.target.value as "price" | "rating" | "distance" | "none")
-                                  }
-                                  className="rounded-xl border border-[#f5d9ff] bg-white/80 px-2 py-1 text-slate-900"
-                                >
-                                  <option value="none">Default</option>
-                                  <option value="price">Price</option>
-                                  <option value="rating">Rating</option>
-                                  <option value="distance">Distance</option>
-                                </select>
-                              </label>
-                            </div>
-                          <ul className="space-y-3">
-                            {filteredHotels.slice(0, 4).map((hotel) => (
-                              <li key={hotel.id} className="rounded-2xl border border-[#ebaef5] bg-white/85 px-3 py-2 text-sm shadow-sm">
-                                <div className="flex flex-col gap-2">
-                                  <div className="flex justify-between gap-2">
-                                    <div>
-                                      <p className="font-semibold text-slate-900">{hotel.name}</p>
-                                      {hotel.address && <p className="text-xs text-slate-600">{hotel.address}</p>}
-                                    </div>
-                                    {hotel.offer && (
-                                      <a
-                                        href={hotel.offer}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="psychedelic-button rounded-full px-3 py-1 text-xs font-semibold text-slate-900"
-                                      >
-                                        Open
-                                      </a>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                                    {typeof hotel.price === "number" && hotel.currency && (
-                                      <span className="font-semibold text-slate-900">
-                                        {hotel.price.toFixed(0)} {hotel.currency}
-                                      </span>
-                                    )}
-                                    {hotel.distanceKm && (
-                                      <span>{hotel.distanceKm.toFixed(1)} km away</span>
-                                    )}
-                                    {hotel.reviewScore && (
-                                      <span>⭐ {hotel.reviewScore.toFixed(1)}</span>
-                                    )}
-                                  </div>
-                                  {hotel.description && (
-                                    <p className="mt-1 text-xs text-slate-600">{hotel.description}</p>
-                                  )}
-                                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
-                                    <span className="rounded-full bg-[#f8ebff] px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-800">
-                                      Hotel stay
-                                    </span>
-                                    <span>{hotelNights} night{hotelNights === 1 ? "" : "s"}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => addHotelToPlan(hotel)}
-                                      disabled={addingHotelId === hotel.id || hotelLoading}
-                                      title="Add this hotel stay to your plan"
-                                      className="rounded-full border border-[#ebaef5] px-3 py-1 font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                      {addingHotelId === hotel.id ? "Adding..." : "Add to plan"}
-                                    </button>
-                                  </div>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                            {hasMoreHotels && (
-                              <div className="pt-2">
-                                <button
-                                  type="button"
-                                  onClick={() => loadHotelsNearDay(hotelPage + 1, true)}
-                                  disabled={hotelLoading}
-                                  title="Load more hotel results"
-                                  className="rounded-full border border-[#ebaef5] px-3 py-1 text-xs font-semibold text-slate-900 transition hover:border-[#d77dff] disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {hotelLoading ? "Loading..." : "Load more"}
-                                </button>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-xs text-slate-500">
-                            {hotelLoading
-                              ? "Fetching nearby hotels..."
-                              : hotelResults.length
-                              ? "No hotels match your filters"
-                              : "No results yet — tap Find hotels."}
-                          </p>
-                        )}
                       </div>
                     )}
                   </div>
@@ -3798,29 +3503,4 @@ const sortActivitiesByStart = (activities: Activity[]) =>
       </main>
     </div>
   );
-}
-function applyHotelFilters(
-  hotels: HotelOption[],
-  filters: { minRating: number; maxDistance: number; maxPrice: number },
-  sort: "price" | "rating" | "distance" | "none",
-) {
-  const filtered = hotels.filter((hotel) => {
-    if (filters.minRating && (hotel.reviewScore ?? 0) < filters.minRating) return false;
-    if (filters.maxDistance && (hotel.distanceKm ?? Infinity) > filters.maxDistance) return false;
-    if (filters.maxPrice && (hotel.price ?? Infinity) > filters.maxPrice) return false;
-    return true;
-  });
-
-  return filtered.sort((a, b) => {
-    if (sort === "price") {
-      return (a.price ?? Infinity) - (b.price ?? Infinity);
-    }
-    if (sort === "rating") {
-      return (b.reviewScore ?? 0) - (a.reviewScore ?? 0);
-    }
-    if (sort === "distance") {
-      return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
-    }
-    return 0;
-  });
 }
